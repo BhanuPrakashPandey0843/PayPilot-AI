@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, type Variants } from "motion/react";
 import { Plus } from "lucide-react";
 
 type FaqItem = {
@@ -37,11 +37,23 @@ const FAQ_ITEMS: FaqItem[] = [
   },
 ];
 
+const staggerContainer: Variants = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.08, delayChildren: 0.1 },
+  },
+};
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+};
+
 export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section className="relative overflow-hidden bg-[#FAFAF8] px-5 py-20 sm:py-24">
+    <section id="faq" className="relative overflow-hidden bg-[#FAFAF8] px-5 py-20 scroll-mt-24 sm:py-24">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-[320px]"
@@ -52,19 +64,31 @@ export function FAQ() {
       />
 
       <div className="relative mx-auto max-w-2xl text-center">
-        <h2 className="text-[28px] font-extrabold leading-[1.15] tracking-[-0.03em] text-[#111217] sm:text-[34px] lg:text-[40px]">
+        <motion.h2
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.6 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="text-[28px] font-extrabold leading-[1.15] tracking-[-0.03em] text-[#111217] sm:text-[34px] lg:text-[40px]"
+        >
           Questions from Operational
           <br />
           Leaders —{" "}
           <span className="font-serif italic text-[#111217]">FAQ</span>
-        </h2>
+        </motion.h2>
 
-        <div className="mx-auto mt-10 max-w-[640px] divide-y divide-black/[0.08] border-y border-black/[0.08] text-left sm:mt-12">
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.2 }}
+          variants={staggerContainer}
+          className="mx-auto mt-10 max-w-[640px] divide-y divide-black/[0.08] border-y border-black/[0.08] text-left sm:mt-12"
+        >
           {FAQ_ITEMS.map((item, index) => {
             const isOpen = openIndex === index;
 
             return (
-              <div key={item.question}>
+              <motion.div key={item.question} variants={fadeUp}>
                 <button
                   type="button"
                   onClick={() => setOpenIndex(isOpen ? null : index)}
@@ -77,6 +101,7 @@ export function FAQ() {
                   <motion.span
                     animate={{ rotate: isOpen ? 45 : 0 }}
                     transition={{ duration: 0.25, ease: "easeOut" }}
+                    whileHover={{ scale: 1.08 }}
                     className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-black/[0.08] text-[#111217]"
                   >
                     <Plus className="h-3.5 w-3.5" strokeWidth={2} />
@@ -99,10 +124,10 @@ export function FAQ() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

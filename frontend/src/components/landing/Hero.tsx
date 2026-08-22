@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { motion } from "motion/react";
 
@@ -17,7 +17,6 @@ export function Hero() {
   const navRef = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const archTextRef = useRef<HTMLSpanElement>(null);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
@@ -25,49 +24,6 @@ export function Hero() {
   const trustRowRef = useRef<HTMLDivElement>(null);
 
   const reducedMotion = useReducedMotion();
-
-  // Size the arch to exactly match the width of the "AI Commerce" text and
-  // pin its curve so it sits flush against the top of that text — fully
-  // behind it, just touching, at every viewport size.
-  useLayoutEffect(() => {
-    const section = sectionRef.current;
-    const heading = headingRef.current;
-    const archText = archTextRef.current;
-    if (!section || !heading || !archText) return;
-
-    const archEl = section.querySelector<HTMLElement>(".hero-arch");
-    if (!archEl) return;
-
-    function positionArch() {
-      if (!archEl || !heading || !section || !archText) return;
-
-      const sectionRect = section.getBoundingClientRect();
-      const textRect = archText.getBoundingClientRect();
-
-      // Match the arch's width to the rendered width of "AI Commerce".
-      archEl.style.width = `${textRect.width}px`;
-
-      // Sit the arch's bottom edge exactly at the top of the text — touching
-      // it, entirely behind it, with no overlap.
-      const textTop = textRect.top - sectionRect.top;
-      archEl.style.top = `${textTop - archEl.offsetHeight}px`;
-    }
-
-    positionArch();
-
-    const resizeObserver = new ResizeObserver(positionArch);
-    resizeObserver.observe(section);
-    window.addEventListener("resize", positionArch);
-
-    // Re-measure once more after fonts/layout settle on first paint.
-    const raf = requestAnimationFrame(positionArch);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", positionArch);
-      cancelAnimationFrame(raf);
-    };
-  }, []);
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -91,16 +47,16 @@ export function Hero() {
         .from(descriptionRef.current, { y: 16, opacity: 0, duration: 0.55 }, 0.55)
         .from(ctaRef.current, { y: 12, opacity: 0, duration: 0.5 }, 0.65)
         .from(
-          cardsRef.current ? Array.from(cardsRef.current.children) : [],
-          { opacity: 0, scale: 0.92, duration: 0.7, stagger: 0.15 },
-          0.55
-        )
-        .from(
           iconsRef.current ? Array.from(iconsRef.current.querySelectorAll("li")) : [],
           { opacity: 0, y: 10, duration: 0.4, stagger: 0.06 },
           0.8
         )
         .from(trustRowRef.current, { opacity: 0, duration: 0.5 }, 0.95);
+      // Note: the floating storytelling cards (cardsRef) are intentionally left out of
+      // this GSAP timeline — HeroFloatingCard already animates its own entrance via
+      // Framer Motion's `initial`/`animate` props. Having both GSAP and Framer Motion
+      // drive opacity/scale/transform on the same nodes causes them to fight over the
+      // same inline styles, which can leave the cards stuck invisible.
     }, sectionRef);
 
     return () => ctx.revert();
@@ -109,6 +65,7 @@ export function Hero() {
   return (
     <section
       ref={sectionRef}
+      id="top"
       className="relative isolate min-h-[680px] w-full overflow-hidden sm:min-h-[720px] lg:min-h-[760px]"
     >
       <HeroBackground />
@@ -126,9 +83,7 @@ export function Hero() {
           ref={headingRef}
           className="mt-5 max-w-[750px] text-[42px] font-extrabold leading-[0.95] tracking-[-0.04em] text-[#111217] sm:mt-6 sm:text-[56px] sm:leading-[0.94] lg:text-[74px] lg:leading-[0.92] lg:tracking-[-0.045em]"
         >
-          <span ref={archTextRef} className="inline-block">
-            AI Commerce
-          </span>
+          AI Commerce
           <br />
           On Autopilot.
         </h1>
@@ -145,8 +100,8 @@ export function Hero() {
           ref={ctaRef}
           className="mt-7 flex w-full max-w-[320px] flex-col gap-2.5 sm:mt-8 sm:max-w-none sm:flex-row sm:items-center sm:justify-center sm:gap-3"
         >
-          <motion.button
-            type="button"
+          <motion.a
+            href="#product"
             animate={{ scale: [1, 1.018, 1] }}
             transition={{
               duration: 2.6,
@@ -159,18 +114,18 @@ export function Hero() {
               transition: { duration: 0.25, ease: "easeOut" },
             }}
             whileTap={{ scale: 0.95 }}
-            className="h-11 w-full rounded-[13px] bg-[#111217] px-6 text-sm font-medium text-white shadow-[0_10px_24px_rgba(17,18,23,0.18)] outline-none focus-visible:ring-2 focus-visible:ring-[#111217]/50 focus-visible:ring-offset-2 sm:h-12 sm:w-auto"
+            className="inline-flex h-11 w-full items-center justify-center rounded-[13px] bg-[#111217] px-6 text-sm font-medium text-white shadow-[0_10px_24px_rgba(17,18,23,0.18)] outline-none focus-visible:ring-2 focus-visible:ring-[#111217]/50 focus-visible:ring-offset-2 sm:h-12 sm:w-auto"
           >
             Explore PayPilot
-          </motion.button>
-          <motion.button
-            type="button"
+          </motion.a>
+          <motion.a
+            href="#security"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="h-11 w-full rounded-[13px] border border-black/[0.08] bg-white px-6 text-sm font-medium text-[#111217] outline-none focus-visible:ring-2 focus-visible:ring-[#111217]/30 focus-visible:ring-offset-2 sm:h-12 sm:w-auto"
+            className="inline-flex h-11 w-full items-center justify-center rounded-[13px] border border-black/[0.08] bg-white px-6 text-sm font-medium text-[#111217] outline-none focus-visible:ring-2 focus-visible:ring-[#111217]/30 focus-visible:ring-offset-2 sm:h-12 sm:w-auto"
           >
             Watch Demo
-          </motion.button>
+          </motion.a>
         </div>
 
         <div ref={iconsRef}>
@@ -188,6 +143,7 @@ export function Hero() {
             line1="Looking for running shoes"
             line2="Budget ₹5,000"
             rotate={-6}
+            delay={0.55}
             className="left-[4%] top-[54%] xl:left-[8%]"
             floatClassName="hero-float"
           />
@@ -196,6 +152,7 @@ export function Hero() {
             line1="+₹798 projected AOV"
             line2="Bundle opportunity detected"
             rotate={5}
+            delay={0.7}
             className="right-[4%] top-[42%] xl:right-[8%]"
             floatClassName="hero-float-slow"
           />

@@ -2,6 +2,7 @@
 
 import type { ComponentType } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import { Mail, Code2, Sparkles, ArrowUpRight } from "lucide-react";
 
@@ -28,6 +29,8 @@ type FooterColumn = {
   links: { label: string; href: string }[];
 };
 
+const CONTACT_EMAIL = "bhanupandey0843@gmail.com";
+
 const FOOTER_LINKS: FooterColumn[] = [
   {
     heading: "Company",
@@ -35,7 +38,7 @@ const FOOTER_LINKS: FooterColumn[] = [
       { label: "About Us", href: "#" },
       { label: "Careers", href: "#" },
       { label: "Blog", href: "#" },
-      { label: "PayPilot AI", href: "#" },
+      { label: "Contact", href: `mailto:${CONTACT_EMAIL}` },
     ],
   },
   {
@@ -43,17 +46,17 @@ const FOOTER_LINKS: FooterColumn[] = [
     links: [
       { label: "Documentation", href: "#" },
       { label: "Help Center", href: "#" },
-      { label: "Common Questions", href: "#" },
-      { label: "PayPilot Services", href: "#" },
+      { label: "FAQ", href: "#faq" },
+      { label: "Security", href: "#security" },
     ],
   },
   {
     heading: "Product",
     links: [
-      { label: "Features", href: "#" },
+      { label: "Features", href: "#product" },
       { label: "Pricing", href: "#" },
       { label: "Integrations", href: "#" },
-      { label: "AI Platform", href: "#" },
+      { label: "AI Platform", href: "#product" },
     ],
   },
 ];
@@ -81,9 +84,11 @@ const SOCIALS: { label: string; icon: IconComponent; href: string }[] = [
   },
 ];
 
-const CONTACT_EMAIL = "bhanupandey0843@gmail.com";
-
 export function Footer() {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  const resolveHref = (href: string) => (href.startsWith("#") && !isHome ? `/${href}` : href);
+
   return (
     <footer className="relative">
       {/* CTA panel */}
@@ -119,7 +124,7 @@ export function Footer() {
 
           <div className="mt-7 flex flex-col items-center justify-center gap-2.5 sm:mt-8 sm:flex-row">
             <motion.a
-              href="#"
+              href={resolveHref("#product")}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="inline-flex h-11 w-full max-w-[220px] items-center justify-center rounded-[13px] border border-black/[0.08] bg-white px-6 text-sm font-medium text-[#111217] outline-none focus-visible:ring-2 focus-visible:ring-[#111217]/30 focus-visible:ring-offset-2 sm:h-12 sm:w-auto"
@@ -127,7 +132,7 @@ export function Footer() {
               See the Agents
             </motion.a>
             <motion.a
-              href="#"
+              href={`mailto:${CONTACT_EMAIL}?subject=Demo%20Request`}
               animate={{ scale: [1, 1.018, 1] }}
               transition={{
                 duration: 2.6,
@@ -150,7 +155,7 @@ export function Footer() {
       </div>
 
       {/* Dark footer */}
-      <div className="relative overflow-hidden bg-[#11141C] px-5 pb-8 pt-12 sm:px-8 sm:pt-14 lg:px-12">
+      <div className="relative overflow-hidden bg-[#111217] px-5 pb-8 pt-12 sm:px-8 sm:pt-14 lg:px-12">
         <div className="mx-auto flex w-full max-w-6xl flex-col">
           {/* Link columns + socials */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4 sm:gap-x-8">
@@ -163,7 +168,7 @@ export function Footer() {
                   {col.links.map((link) => (
                     <li key={link.label}>
                       <Link
-                        href={link.href}
+                        href={resolveHref(link.href)}
                         className="text-[13px] text-white/75 transition-colors hover:text-white"
                       >
                         {link.label}
@@ -228,20 +233,20 @@ export function Footer() {
           {/* Bottom bar */}
           <div className="mt-8 flex flex-col-reverse items-center gap-3 border-t border-white/[0.08] pt-6 sm:mt-6 sm:flex-row sm:justify-between sm:gap-0">
             <p className="text-[11px] text-white/40">
-              © {new Date().getFullYear()} PayPilot AI. All rights reserved.
+              © {new Date().getFullYear()} PayPilot AI. Built as a hackathon prototype.
             </p>
             <div className="flex items-center gap-5">
               <Link
-                href="#"
+                href="/privacy-policy"
                 className="text-[11px] text-white/40 hover:text-white/70"
               >
                 Privacy Policy
               </Link>
               <Link
-                href="#"
+                href="/terms-and-conditions"
                 className="text-[11px] text-white/40 hover:text-white/70"
               >
-                Terms and Conditions
+                Terms & Conditions
               </Link>
             </div>
           </div>
