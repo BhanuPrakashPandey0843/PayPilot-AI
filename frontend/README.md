@@ -6,8 +6,9 @@ Next.js (App Router) web app for PayPilot AI, styled with Tailwind CSS v4 and sh
 
 - [Next.js 16](https://nextjs.org/) (App Router) + TypeScript
 - [Tailwind CSS v4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) + Radix primitives
+- [GSAP](https://gsap.com/) for the hero entrance sequence
+- [Motion](https://motion.dev/) for hover/tap micro-interactions
 - [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/) for forms/validation
-- [GSAP](https://gsap.com/) / [Motion](https://motion.dev/) for animation
 - [Recharts](https://recharts.org/) for charts
 - [Embla Carousel](https://www.embla-carousel.com/), [Sonner](https://sonner.emilkowal.ski/) toasts, [lucide-react](https://lucide.dev/) icons
 
@@ -31,4 +32,4 @@ Open [http://localhost:3000](http://localhost:3000) to view the app.
 
 ## Current status
 
-This is still the default `create-next-app` scaffold (`src/app/page.tsx` / `layout.tsx`) with the design system (Tailwind theme, shadcn config) wired up. No PayPilot-specific pages or components have been built yet.
+The landing-page **Navbar + Hero** section is built (`src/components/landing/`), matching the provided desktop/mobile design references. GSAP drives the entrance sequence, Motion handles hover/tap micro-interactions, and `prefers-reduced-motion` is respected. The rest of the landing page (features, pricing, footer, etc.) has not been built yet.

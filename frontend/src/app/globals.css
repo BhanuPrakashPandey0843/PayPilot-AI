@@ -7,9 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-geist-sans);
+  --font-serif: var(--font-playfair);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -126,5 +127,82 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* ==========================================================
+   Landing / Hero — decorative background primitives
+   ========================================================== */
+
+.hero-dots {
+  background-image: radial-gradient(rgba(20, 20, 20, 0.1) 0.7px, transparent 0.7px);
+  background-size: 12px 12px;
+}
+
+@media (max-width: 639px) {
+  .hero-dots {
+    background-image: radial-gradient(rgba(20, 20, 20, 0.07) 0.7px, transparent 0.7px);
+  }
+}
+
+.hero-glows {
+  background-image:
+    radial-gradient(45% 40% at 12% 88%, #ddd3ff 0%, rgba(221, 211, 255, 0) 70%),
+    radial-gradient(40% 45% at 88% 45%, #fff4b8 0%, rgba(255, 244, 184, 0) 70%),
+    radial-gradient(35% 30% at 85% 8%, #f3f7d8 0%, rgba(243, 247, 216, 0) 70%),
+    radial-gradient(30% 25% at 8% 5%, #e9e1ff 0%, rgba(233, 225, 255, 0) 70%);
+  opacity: 0.9;
+}
+
+.hero-arch {
+  position: absolute;
+  top: -46%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(900px, 168vw);
+  height: 78%;
+  border-radius: 0 0 50% 50% / 0 0 38% 38%;
+  background: linear-gradient(
+    to bottom,
+    rgba(72, 72, 80, 0.22),
+    rgba(72, 72, 80, 0.1) 55%,
+    rgba(72, 72, 80, 0) 100%
+  );
+  border: 1px solid rgba(72, 72, 80, 0.18);
+  border-top: none;
+  filter: blur(1px);
+  pointer-events: none;
+}
+
+@media (max-width: 639px) {
+  .hero-arch {
+    width: min(560px, 145vw);
+    top: -42%;
+    height: 72%;
+  }
+}
+
+@keyframes hero-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -8px;
+  }
+}
+
+.hero-float {
+  animation: hero-float 5s ease-in-out infinite;
+}
+
+.hero-float-slow {
+  animation: hero-float 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-float,
+  .hero-float-slow {
+    animation: none;
   }
 }
