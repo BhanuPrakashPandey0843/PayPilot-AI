@@ -16,8 +16,21 @@ const envSchema = z.object({
 
   JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
 
-  RAZORPAY_KEY_ID: z.string().min(1, "RAZORPAY_KEY_ID is required"),
-  RAZORPAY_KEY_SECRET: z.string().min(1, "RAZORPAY_KEY_SECRET is required"),
+  // Optional at the env-schema level so the app can still boot (and the
+  // automated test suite, which mocks Razorpay entirely, can still run)
+  // without real Razorpay credentials configured. Checkout/payment/webhook
+  // routes fail closed with a clear 500 (see razorpay.client.ts) rather
+  // than silently no-oping if these are missing at the moment they're
+  // actually needed.
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  // HMAC secret configured on the Razorpay Dashboard webhook settings
+  // page — NOT the same as RAZORPAY_KEY_SECRET. Used only to verify
+  // POST /api/v1/webhooks/razorpay signatures.
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+
+  // JWT access token lifetime, e.g. "15m", "1h", "7d".
+  JWT_EXPIRES_IN: z.string().default("7d"),
 
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
 });

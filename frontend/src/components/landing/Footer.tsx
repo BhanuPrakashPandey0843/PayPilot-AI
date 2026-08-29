@@ -91,69 +91,79 @@ export function Footer() {
 
   return (
     <footer className="relative">
-      {/* CTA panel */}
-      <div className="relative overflow-hidden bg-[#FAFAF8] px-5 pb-16 pt-20 text-center sm:pb-20 sm:pt-24">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[420px]"
-          style={{
-            background:
-              "radial-gradient(42% 55% at 8% 100%, rgba(140,123,224,0.32) 0%, rgba(140,123,224,0) 70%), " +
-              "radial-gradient(42% 55% at 92% 100%, rgba(140,123,224,0.32) 0%, rgba(140,123,224,0) 70%)",
+     {/* CTA panel */}
+<div
+  className="relative isolate min-h-[680px] w-full overflow-hidden bg-[#FAFAF8] px-5 pb-16 pt-20 text-center sm:min-h-[720px] sm:pb-20 sm:pt-24 lg:min-h-[760px] lg:pb-24 lg:pt-28"
+>
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute inset-x-0 bottom-0 h-[420px]"
+    style={{
+      background:
+        "radial-gradient(42% 55% at 8% 100%, rgba(140,123,224,0.32) 0%, rgba(140,123,224,0) 70%), " +
+        "radial-gradient(42% 55% at 92% 100%, rgba(140,123,224,0.32) 0%, rgba(140,123,224,0) 70%)",
+    }}
+  />
+
+  <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center px-0 text-center">
+    <div className="mx-auto max-w-[750px]">
+      <h2 className="text-[42px] font-extrabold leading-[0.95] tracking-[-0.04em] text-[#111217] sm:text-[56px] sm:leading-[0.94] lg:text-[64px] lg:leading-[0.92] lg:tracking-[-0.045em]">
+        Ready to put your commerce
+        <br />
+        <span className="inline-flex items-center gap-2 font-serif font-medium italic text-[#111217]">
+          on autopilot
+          <Sparkles
+            className="h-[0.8em] w-[0.8em] shrink-0 text-[#8C7BE0]"
+            strokeWidth={1.75}
+          />
+          ?
+        </span>
+      </h2>
+
+      <p className="mx-auto mt-5 max-w-[500px] text-[13px] leading-[1.45] text-[#5F6067] sm:mt-6 sm:text-[15px] lg:text-[16px]">
+        Let PayPilot AI handle discovery, recommendations and checkout —
+        so your team can focus on growth, not busywork.
+      </p>
+
+      <div className="mt-7 flex w-full flex-col items-center justify-center gap-2.5 sm:mt-8 sm:flex-row sm:gap-3">
+        <motion.a
+          href={resolveHref("#product")}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="inline-flex h-11 w-full max-w-[220px] items-center justify-center rounded-[13px] border border-black/[0.08] bg-white px-6 text-sm font-medium text-[#111217] outline-none focus-visible:ring-2 focus-visible:ring-[#111217]/30 focus-visible:ring-offset-2 sm:h-12 sm:w-auto"
+        >
+          See the Agents
+        </motion.a>
+
+        <motion.a
+          href={`mailto:${CONTACT_EMAIL}?subject=Demo%20Request`}
+          animate={{ scale: [1, 1.018, 1] }}
+          transition={{
+            duration: 2.6,
+            repeat: Infinity,
+            ease: "easeInOut",
           }}
-        />
-
-        <div className="relative mx-auto max-w-2xl">
-          <h2 className="text-[clamp(1.6rem,5vw,2.5rem)] font-extrabold leading-[1.15] tracking-[-0.03em] text-[#111217]">
-            Ready to put your commerce
-            <br />
-            <span className="inline-flex items-center gap-2 font-serif font-medium italic text-[#111217]">
-              on autopilot
-              <Sparkles
-                className="h-[0.8em] w-[0.8em] shrink-0 text-[#8C7BE0]"
-                strokeWidth={1.75}
-              />
-              ?
-            </span>
-          </h2>
-
-          <p className="mx-auto mt-4 max-w-[420px] text-[13px] leading-[1.5] text-[#5F6067] sm:text-[14px]">
-            Let PayPilot AI handle discovery, recommendations and checkout —
-            so your team can focus on growth, not busywork.
-          </p>
-
-          <div className="mt-7 flex flex-col items-center justify-center gap-2.5 sm:mt-8 sm:flex-row">
-            <motion.a
-              href={resolveHref("#product")}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="inline-flex h-11 w-full max-w-[220px] items-center justify-center rounded-[13px] border border-black/[0.08] bg-white px-6 text-sm font-medium text-[#111217] outline-none focus-visible:ring-2 focus-visible:ring-[#111217]/30 focus-visible:ring-offset-2 sm:h-12 sm:w-auto"
-            >
-              See the Agents
-            </motion.a>
-            <motion.a
-              href={`mailto:${CONTACT_EMAIL}?subject=Demo%20Request`}
-              animate={{ scale: [1, 1.018, 1] }}
-              transition={{
-                duration: 2.6,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              whileHover={{
-                scale: 1.06,
-                boxShadow: "0 16px 34px rgba(17,18,23,0.32)",
-                transition: { duration: 0.25, ease: "easeOut" },
-              }}
-              whileTap={{ scale: 0.95 }}
-              className="inline-flex h-11 w-full max-w-[220px] items-center justify-center gap-1.5 rounded-[13px] bg-[#111217] px-6 text-sm font-medium text-white shadow-[0_10px_24px_rgba(17,18,23,0.18)] outline-none focus-visible:ring-2 focus-visible:ring-[#111217]/50 focus-visible:ring-offset-2 sm:h-12 sm:w-auto"
-            >
-              Book a Demo
-              <ArrowUpRight className="h-4 w-4" strokeWidth={2} />
-            </motion.a>
-          </div>
-        </div>
+          whileHover={{
+            scale: 1.06,
+            boxShadow: "0 16px 34px rgba(17,18,23,0.32)",
+            transition: {
+              duration: 0.25,
+              ease: "easeOut",
+            },
+          }}
+          whileTap={{ scale: 0.95 }}
+          className="inline-flex h-11 w-full max-w-[220px] items-center justify-center gap-1.5 rounded-[13px] bg-[#111217] px-6 text-sm font-medium text-white shadow-[0_10px_24px_rgba(17,18,23,0.18)] outline-none focus-visible:ring-2 focus-visible:ring-[#111217]/50 focus-visible:ring-offset-2 sm:h-12 sm:w-auto"
+        >
+          Book a Demo
+          <ArrowUpRight
+            className="h-4 w-4"
+            strokeWidth={2}
+          />
+        </motion.a>
       </div>
-
+    </div>
+  </div>
+</div>
       {/* Dark footer */}
       <div className="relative overflow-hidden bg-[#111217] px-5 pb-8 pt-12 sm:px-8 sm:pt-14 lg:px-12">
         <div className="mx-auto flex w-full max-w-6xl flex-col">
