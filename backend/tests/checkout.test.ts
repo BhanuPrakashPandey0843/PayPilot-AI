@@ -595,5 +595,72 @@ test("(CO12) checkout produces an organization-scoped, explainable audit trail",
   }
 
   const auditB = await app.inject({ method: "GET", url: "/api/v1/audit?limit=100", headers: auth(orgB.token) });
-  assert.equal(auditB.json().data.length, 0, "org B must not see org A's audit events");
+  assert.equal(auditB.statusCode, 200, auditB.body);
+  const orgBRows: { organizationId: string; action: string; resourceId: string | null }[] = auditB.json().data;
+
+  // The actual tenant-isolation invariant: EVERY row org B can see must
+  // belong to org B — never org A. (Note: org B legitimately has its own
+  // audit history at this point — registerUser() above already wrote a
+  // USER_REGISTERED event scoped to org B, and this very GET /audit call
+  // wrote its own PERMISSION_CHECK_GRANTED event scoped to org B — so
+  // asserting an empty array here would be wrong; every organization has
+  // *some* audit history from the moment it's created.)
+  for (const row of orgBRows) {
+    assert.equal(row.organizationId, orgB.organizationId, `org B's audit query returned a row belonging to a different organization: ${JSON.stringify(row)}`);
+  }
+
+  // Belt-and-suspenders: none of org A's specific checkout artifacts
+  // (its order id, its Razorpay order id, or its checkout-specific
+  // action types) may appear anywhere in org B's results.
+  const orgBResourceIds = orgBRows.map((r) => r.resourceId);
+  assert.ok(!orgBResourceIds.includes(orderId), "org B must never see org A's orderId in its audit trail");
+  assert.ok(!orgBResourceIds.includes(razorpayOrderId), "org B must never see org A's razorpayOrderId in its audit trail");
+  const orgBActions = orgBRows.map((r) => r.action);
+  for (const orgASpecificAction of ["CHECKOUT_REQUESTED", "POLICY_APPROVED", "RAZORPAY_ORDER_CREATED", "PAYMENT_INITIATED", "PAYMENT_VERIFIED", "ORDER_STATUS_CHANGED"]) {
+    assert.ok(!orgBActions.includes(orgASpecificAction), `org B's audit trail unexpectedly contains ${orgASpecificAction}, which only org A's checkout should have produced`);
+  }
+});
+
+test("(CO13) org B's own audit events remain visible to org B (isolation is not over-broad)", async (t) => {
+  const app = await buildTestApp();
+  t.after(() => app.close());
+  const orgA = await registerUser(app);
+  const orgB = await registerUser(app);
+  const productB = await insertProduct(orgB.organizationId, { inventoryQuantity: 10 });
+  const customerB = await insertCustomer(orgB.organizationId);
+  const sessionId = uniqueSessionId();
+  await addToCart(app, orgB.token, sessionId, productB.id, 1);
+
+  const mock = mockRazorpayGateway({ signatureValid: true });
+  t.after(mock.restore);
+
+  const create = await app.inject({
+    method: "POST",
+    url: "/api/v1/checkout/create-order",
+    headers: auth(orgB.token),
+    payload: { sessionId, customerId: customerB.id },
+  });
+  assert.equal(create.statusCode, 200, create.body);
+  const { orderId } = create.json().data;
+
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  // Org B must see its OWN checkout's audit trail in full.
+  const auditB = await app.inject({
+    method: "GET",
+    url: `/api/v1/audit?resourceType=order&resourceId=${orderId}&limit=50`,
+    headers: auth(orgB.token),
+  });
+  assert.equal(auditB.statusCode, 200, auditB.body);
+  const actionsB = auditB.json().data.map((e: { action: string }) => e.action);
+  assert.ok(actionsB.includes("ORDER_CREATED"), `org B should see its own ORDER_CREATED event: ${JSON.stringify(actionsB)}`);
+
+  // ... and org A must NOT see any of it, even filtering by org B's exact resourceId.
+  const auditA = await app.inject({
+    method: "GET",
+    url: `/api/v1/audit?resourceType=order&resourceId=${orderId}&limit=50`,
+    headers: auth(orgA.token),
+  });
+  assert.equal(auditA.statusCode, 200, auditA.body);
+  assert.equal(auditA.json().data.length, 0, "org A must not see org B's order events even when querying org B's exact resourceId");
 });

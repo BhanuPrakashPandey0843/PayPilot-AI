@@ -31,12 +31,18 @@ const commerceResponseJsonSchema = {
       properties: {
         message: { type: "string" },
         intent: { type: "string" },
-        products: { type: "array", items: { type: "object" } },
-        recommendations: { type: "array", items: { type: "object" } },
-        comparison: { type: "array", items: { type: "object" } },
-        policy: { type: "object" },
-        orderPreview: { type: "object" },
-        memory: { type: "object" },
+        // additionalProperties: true on every loosely-typed nested shape
+        // below is required — fast-json-stringify (Fastify's response
+        // serializer) silently drops any object property not explicitly
+        // declared in the schema, so without this every product/etc would
+        // serialize as `{}` even though the service layer populated it
+        // (e.g. matchScore/matchReasons on ProductMatch).
+        products: { type: "array", items: { type: "object", additionalProperties: true } },
+        recommendations: { type: "array", items: { type: "object", additionalProperties: true } },
+        comparison: { type: "array", items: { type: "object", additionalProperties: true } },
+        policy: { type: "object", additionalProperties: true },
+        orderPreview: { type: "object", additionalProperties: true },
+        memory: { type: "object", additionalProperties: true },
         nextAction: { type: "string" },
       },
     },

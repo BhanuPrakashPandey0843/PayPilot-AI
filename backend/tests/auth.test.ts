@@ -76,6 +76,7 @@ async function buildTestApp() {
   const rbacRoutes: Array<{ path: string; perm: string }> = [
     { path: "/api/v1/_test/catalog.write", perm: "catalog.create" },
     { path: "/api/v1/_test/ai.execute", perm: "ai.execute" },
+    { path: "/api/v1/_test/payments.read", perm: "payments.read" },
     { path: "/api/v1/_test/payments.create", perm: "payments.create" },
     { path: "/api/v1/_test/payments.refund", perm: "payments.refund" },
     { path: "/api/v1/_test/organizations.write", perm: "organizations.update" },
@@ -624,10 +625,12 @@ test("(D1) FINANCE role: payments.read/create/refund + orders.read ✓ — canno
 
   const { token } = await registerUserWithRole(app, "FINANCE");
 
-  // Expected ALLOWED for FINANCE:
-  await assertHasPermission(app, token, "/api/v1/_test/payments.read", false);
-  // payments.read isn't in our matrix — use the equivalent: catalog.read
-  // isn't allowed either, but payments.create/refund should be:
+  // Expected ALLOWED for FINANCE (per scripts/seed.ts's ROLE_PERMISSIONS.FINANCE
+  // and the README's documented RBAC matrix: "FINANCE | orders read, payments
+  // read+refund, audit read"). This assertion was previously miscoded as
+  // `false` (denied), which contradicted both this test's own title and the
+  // project's actual RBAC specification — flipped to `true` to match reality.
+  await assertHasPermission(app, token, "/api/v1/_test/payments.read", true);
   await assertHasPermission(app, token, "/api/v1/_test/payments.create", true);
   await assertHasPermission(app, token, "/api/v1/_test/payments.refund", true);
   await assertHasPermission(app, token, "/api/v1/_test/orders.write", false); // FINANCE: orders.read only, no create
@@ -635,6 +638,23 @@ test("(D1) FINANCE role: payments.read/create/refund + orders.read ✓ — canno
   await assertHasPermission(app, token, "/api/v1/_test/catalog.write", false);
   await assertHasPermission(app, token, "/api/v1/_test/ai.execute", false);
   await assertHasPermission(app, token, "/api/v1/_test/customers.write", false);
+});
+
+test("(D1b) a role with zero granted permissions is denied payments.read (negative control for D1)", async (t) => {
+  const app = await buildTestApp();
+  t.after(() => app.close());
+
+  const creds = await registerUser(app);
+  const [noPermsRole] = await db
+    .insert(roles)
+    .values({ name: `NO_PERMS_D1B_${randomUUID().slice(0, 8)}`, description: "test-only: zero permissions, regression guard for D1" })
+    .returning();
+  await db
+    .update(organizationMembers)
+    .set({ roleId: noPermsRole.id })
+    .where(and(eq(organizationMembers.userId, creds.user.id), eq(organizationMembers.organizationId, creds.organizationId)));
+
+  await assertHasPermission(app, creds.token, "/api/v1/_test/payments.read", false);
 });
 
 test("(D2) SUPPORT role: customers.update + read ✓ — cannot payments.create, payments.refund, ai.execute, catalog.write", async (t) => {

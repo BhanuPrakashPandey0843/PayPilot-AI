@@ -64,9 +64,9 @@ A missing/invalid variable crashes the process **before** the server starts list
 |---|---|---|---|
 | `NODE_ENV` | | `development` | |
 | `HOST` / `PORT` | | `0.0.0.0` / `4000` | Bind address |
-| `DATABASE_URL` | ✅ | — | Neon / Postgres connection string |
-| `REDIS_URL` | ✅ | — | ioredis client connection (reserved for future caching + rate limits) |
-| `JWT_SECRET` | ✅ (≥16 chars) | — | HS256 signing secret for `@fastify/jwt` |
+| `DATABASE_URL` | - | — | Neon / Postgres connection string |
+| `REDIS_URL` | - | — | ioredis client connection (reserved for future caching + rate limits) |
+| `JWT_SECRET` | - (≥16 chars) | — | HS256 signing secret for `@fastify/jwt` |
 | `JWT_EXPIRES_IN` | | `7d` | Token lifetime. Accepts `@fastify/jwt` format: `"15m"`, `"1h"`, `"7d"`, … |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | for checkout | — | Test-mode Razorpay credentials (Milestone 5). Without these, `/checkout/*` fails closed with `PAYMENT_PROVIDER_NOT_CONFIGURED` instead of a confusing 500 elsewhere. |
 | `RAZORPAY_WEBHOOK_SECRET` | for webhooks | — | Configured on the Razorpay Dashboard under Settings > Webhooks. **Not** the same value as `RAZORPAY_KEY_SECRET`. |
@@ -91,7 +91,7 @@ Running `SEED_DEMO=1 npm run db:seed` creates a complete demo tenant (idempotent
 |  | **Running Cap** — ₹599 (38 in stock, Accessories) |
 | Customers | Arjun Mehta, Priya Sharma, Rohit Verma, Ananya Iyer |
 
-> ⚠️ Never use this tenant in production. The demo password is printed *only*
+> - Never use this tenant in production. The demo password is printed *only*
 > during the seed run so you can log in immediately via Swagger UI.
 
 ## API
@@ -422,7 +422,7 @@ secrets are scrubbed before persistence (same `scrub()` used for the stdout log)
 2. Open `http://localhost:4000/docs`
 3. (if using demo data) Click **Authorize** → enter `Bearer <your token>`
    - Or: `POST /api/v1/auth/login` with the demo credentials → copy the returned token
-4. Every protected route has a 🔒 icon; click **Try it out** on any route.
+4. Every protected route has a - icon; click **Try it out** on any route.
 
 ## Architecture
 
@@ -521,35 +521,35 @@ modules land.
 
 ### Enforced today
 
-✅ Passwords bcrypt-hashed (12 rounds, 128-char input ceiling) — no plaintext, `passwordHash`/`password_hash` never appear in any response.
-✅ JWT secret ≥16 chars; payload is `{ sub, organizationId, roleId, role }` only — no permissions, no PII beyond IDs.
-✅ Registration + user/org creation is one Drizzle transaction; partial states are impossible.
-✅ `organizationId` is *never* read from request body on write endpoints — it always comes from `request.authUser`.
-✅ All list/GET/PATCH/DELETE queries include `WHERE organization_id = authUser.organizationId`; cross-org lookups return 404 (tenant non-disclosure).
-✅ `requirePermission()` is a fresh DB join every request; `authenticate()` re-loads `users.status` every request.
-✅ Login uses one generic error message for unknown-email *and* wrong-password (no enumeration).
-✅ 401 vs 403 is always correctly distinguished (unauthenticated vs authenticated but unauthorized).
-✅ Registration assigns `ORG_ADMIN` via server-side role name lookup (not from client).
-✅ Secrets only in `.env` (gitignored); `.env.example` has placeholders only.
-✅ Global error handler: `AppError` → envelope; Zod validation → 422 with field details; anything else → 500 generic + server-side real-cause log.
-✅ DB-level financial integrity: composite FKs guard cross-tenant orders/payments; `ON DELETE RESTRICT` protects financial history. Validate with `npx tsx scripts/validate-step1.ts` (5/5 pass).
-✅ Audit emitter `emitAudit()` never throws, scrubs secrets, logs structured JSON → future `audit_events` table is a drop-in swap.
+- Passwords bcrypt-hashed (12 rounds, 128-char input ceiling) — no plaintext, `passwordHash`/`password_hash` never appear in any response.
+- JWT secret ≥16 chars; payload is `{ sub, organizationId, roleId, role }` only — no permissions, no PII beyond IDs.
+- Registration + user/org creation is one Drizzle transaction; partial states are impossible.
+- `organizationId` is *never* read from request body on write endpoints — it always comes from `request.authUser`.
+- All list/GET/PATCH/DELETE queries include `WHERE organization_id = authUser.organizationId`; cross-org lookups return 404 (tenant non-disclosure).
+- `requirePermission()` is a fresh DB join every request; `authenticate()` re-loads `users.status` every request.
+- Login uses one generic error message for unknown-email *and* wrong-password (no enumeration).
+- 401 vs 403 is always correctly distinguished (unauthenticated vs authenticated but unauthorized).
+- Registration assigns `ORG_ADMIN` via server-side role name lookup (not from client).
+- Secrets only in `.env` (gitignored); `.env.example` has placeholders only.
+- Global error handler: `AppError` → envelope; Zod validation → 422 with field details; anything else → 500 generic + server-side real-cause log.
+- DB-level financial integrity: composite FKs guard cross-tenant orders/payments; `ON DELETE RESTRICT` protects financial history. Validate with `npx tsx scripts/validate-step1.ts` (5/5 pass).
+- Audit emitter `emitAudit()` never throws, scrubs secrets, logs structured JSON → future `audit_events` table is a drop-in swap.
 
 ### Planned (Milestone 3+ — documented so we don't lose track)
 
-🔒 **Rate limiting on auth endpoints.** `@fastify/rate-limit` backed by Redis using the already-installed `ioredis`. Suggested defaults (tune via env):
+- **Rate limiting on auth endpoints.** `@fastify/rate-limit` backed by Redis using the already-installed `ioredis`. Suggested defaults (tune via env):
    - `POST /auth/login`: 10 req / 1 min / IP → 429
    - `POST /auth/register`: 5 req / 1 hour / IP → 429
    - Global: 1000 req / 1 min / user-id (or IP for anon)
    Code paths are already clean Fastify hooks — just register in `src/index.ts`.
 
-🔒 **Refresh tokens + shorter JWT lifetimes.** Milestone 2 uses one access token with `JWT_EXPIRES_IN` (default 7d) for simplicity; production should move to access (15 min) + refresh (rotatable, revocable, stored in Redis/DB) — schema for `refresh_tokens` table lives in Milestone 3.
+- **Refresh tokens + shorter JWT lifetimes.** Milestone 2 uses one access token with `JWT_EXPIRES_IN` (default 7d) for simplicity; production should move to access (15 min) + refresh (rotatable, revocable, stored in Redis/DB) — schema for `refresh_tokens` table lives in Milestone 3.
 
-🔒 **Request-ID / actor-IP in audit events.** The `context` field is already shaped for these; wire Fastify's `request.id` + `request.ip` in one place (a global `preHandler` in Milestone 3) instead of per-call-site.
+- **Request-ID / actor-IP in audit events.** The `context` field is already shaped for these; wire Fastify's `request.id` + `request.ip` in one place (a global `preHandler` in Milestone 3) instead of per-call-site.
 
-🔒 **CORS strict mode.** `CORS_ORIGIN` already exists as a single-origin env var; in prod add an allow-list array + reject non-matching origins explicitly.
+- **CORS strict mode.** `CORS_ORIGIN` already exists as a single-origin env var; in prod add an allow-list array + reject non-matching origins explicitly.
 
-🔒 **Helmet CSP.** Helmet is registered at defaults today; in production add a tighter CSP matching the actual frontend origin.
+- **Helmet CSP.** Helmet is registered at defaults today; in production add a tighter CSP matching the actual frontend origin.
 
 ## Testing
 
