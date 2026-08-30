@@ -98,7 +98,7 @@ export async function commerceAgentRoutes(app: FastifyInstance) {
         summary: "Read a conversation session's current cart, last intent, and last filters",
         security: [{ bearerAuth: [] }],
         querystring: sessionQueryJsonSchema,
-        response: { 200: { type: "object" } },
+        response: { 200: { type: "object", additionalProperties: true } },
       },
     },
     async (request, reply) => {
@@ -122,7 +122,7 @@ export async function commerceAgentRoutes(app: FastifyInstance) {
         summary: "Clear a conversation session (cart, memory, and history)",
         security: [{ bearerAuth: [] }],
         querystring: sessionQueryJsonSchema,
-        response: { 200: { type: "object" } },
+        response: { 200: { type: "object", additionalProperties: true } },
       },
     },
     async (request, reply) => {
@@ -151,7 +151,7 @@ export async function commerceAgentRoutes(app: FastifyInstance) {
           "failed policy check returns the explanation instead of a preview.",
         security: [{ bearerAuth: [] }],
         body: orderPreviewBodyJsonSchema,
-        response: { 200: { type: "object" } },
+        response: { 200: { type: "object", additionalProperties: true } },
       },
     },
     async (request, reply) => {
@@ -189,7 +189,7 @@ export async function commerceAgentRoutes(app: FastifyInstance) {
           "cross-tenant id surfaces as a 404 for that lookup.",
         security: [{ bearerAuth: [] }],
         querystring: compareQueryJsonSchema,
-        response: { 200: { type: "object" } },
+        response: { 200: { type: "object", additionalProperties: true } },
       },
     },
     async (request, reply) => {

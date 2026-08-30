@@ -86,9 +86,10 @@ async function expectRejection(
     };
     results.push(result);
     return result;
-  } catch (err: any) {
-    const code = err?.code;
-    const constraint = err?.constraint_name ?? err?.constraint ?? null;
+  } catch (err: unknown) {
+    const pgErr = err as { code?: string; constraint_name?: string; constraint?: string; message?: string } | null;
+    const code = pgErr?.code;
+    const constraint = pgErr?.constraint_name ?? pgErr?.constraint ?? null;
     const isExpectedCode = typeof code === "string" && expectedCodes.includes(code);
     const constraintMatches = expectedConstraint === null || constraint === expectedConstraint;
 
@@ -98,7 +99,7 @@ async function expectRejection(
       expected: expectedDescription,
       actual: pass
         ? `Rejected as expected — Postgres error ${code} on constraint "${constraint}".`
-        : `UNEXPECTED ERROR — code=${code ?? "n/a"} constraint=${constraint ?? "n/a"} message="${err?.message ?? String(err)}"`,
+        : `UNEXPECTED ERROR — code=${code ?? "n/a"} constraint=${constraint ?? "n/a"} message="${pgErr?.message ?? String(err)}"`,
       pass,
     };
     results.push(result);
@@ -265,8 +266,8 @@ async function main() {
       // -----------------------------------------------------------------
       throw new Error("STEP1_VALIDATION_INTENTIONAL_ROLLBACK");
     });
-  } catch (err: any) {
-    if (err?.message === "STEP1_VALIDATION_INTENTIONAL_ROLLBACK") {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === "STEP1_VALIDATION_INTENTIONAL_ROLLBACK") {
       rolledBack = true;
     } else {
       console.error("UNEXPECTED SETUP FAILURE (not a test assertion) — aborting.");

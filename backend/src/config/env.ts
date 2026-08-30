@@ -33,6 +33,33 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default("7d"),
 
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
+
+  // --- Milestone 6: AI provider abstraction (src/modules/ai/) ---
+  // Both optional by design (Phase 12 — AI failure handling): with neither
+  // set, ai/provider.ts falls back to a deterministic template explainer
+  // instead of failing to boot or throwing at request time. Set AT MOST
+  // one of these in a given environment; if both are set, ANTHROPIC_API_KEY
+  // wins (see ai/provider.ts `resolveProvider`).
+  ANTHROPIC_API_KEY: z.string().optional(),
+  ANTHROPIC_MODEL: z.string().default("claude-sonnet-4-6"),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().default("gpt-4o-mini"),
+
+  // Abandoned-checkout / conversion-drop / payment-recovery thresholds —
+  // documented, configurable constants per the spec's "deterministic and
+  // documented" requirement (see revenue.engine.ts for where these are
+  // consumed).
+  ABANDONED_CHECKOUT_THRESHOLD_MINUTES: z.coerce.number().int().positive().default(180),
+  REVENUE_DROP_THRESHOLD_PERCENT: z.coerce.number().positive().default(10),
+  MIN_CROSS_SELL_SAMPLE_SIZE: z.coerce.number().int().positive().default(5),
+
+  // Phase 9 policy engine — the maximum estimatedRevenueImpact (integer minor
+  // units) a revenue opportunity may have and still be auto-executable via
+  // POST /api/v1/revenue/opportunities/:id/execute. An APPROVED opportunity
+  // above this limit is BLOCKED by the policy engine (see
+  // modules/revenue/action-policy.service.ts) — the merchant can still see
+  // and approve it, but must act on it manually. Default ₹1,00,000.
+  REVENUE_ACTION_MAX_AMOUNT_MINOR: z.coerce.number().int().nonnegative().default(100_000 * 100),
 });
 
 const parsed = envSchema.safeParse(process.env);

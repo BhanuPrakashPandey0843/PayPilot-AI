@@ -38,6 +38,39 @@ export async function updatePaymentAttempt(
   return row;
 }
 
+/**
+ * Compare-and-swap status update (audit hardening, concurrency fix).
+ *
+ * `updatePaymentAttempt` above writes unconditionally by id — fine for
+ * non-status fields, but dangerous for the state machine: under Postgres
+ * READ COMMITTED, two concurrent writers (e.g. a Razorpay webhook and a
+ * racing /verify-payment call) can both SELECT the same starting status
+ * before either commits, both pass the in-app `isValidAttemptTransition`
+ * check, and then both blindly UPDATE — the second writer would silently
+ * clobber whatever the first one just committed (e.g. overwriting a
+ * freshly-captured attempt back to failed).
+ *
+ * This function closes that window by making `fromStatus` part of the
+ * WHERE clause: the UPDATE only ever applies to a row that is STILL in
+ * the exact state the caller read. If another transaction already moved
+ * it, zero rows are affected and `undefined` is returned — the caller
+ * (payment.service.ts `transitionAttempt`) re-fetches to find out what
+ * actually happened instead of assuming its own view was correct.
+ */
+export async function casUpdatePaymentAttemptStatus(
+  executor: Executor,
+  id: string,
+  fromStatus: PaymentAttempt["status"],
+  values: Partial<NewPaymentAttempt>
+): Promise<PaymentAttempt | undefined> {
+  const [row] = await executor
+    .update(paymentAttempts)
+    .set({ ...values, updatedAt: new Date() })
+    .where(and(eq(paymentAttempts.id, id), eq(paymentAttempts.status, fromStatus)))
+    .returning();
+  return row;
+}
+
 export async function getPaymentAttemptByIdScoped(
   organizationId: string,
   id: string,

@@ -13,6 +13,7 @@ import * as orders from "./schema/orders.js";
 import * as payments from "./schema/payments.js";
 import * as auditLogs from "./schema/audit_logs.js";
 import * as webhookEvents from "./schema/webhook_events.js";
+import * as revenueOpportunities from "./schema/revenue_opportunities.js";
 
 export const schema = {
   ...organizations,
@@ -27,6 +28,7 @@ export const schema = {
   ...payments,
   ...auditLogs,
   ...webhookEvents,
+  ...revenueOpportunities,
 };
 
 // Single shared connection pool for the process. `max` kept modest since

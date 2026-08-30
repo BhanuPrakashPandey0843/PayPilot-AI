@@ -5,8 +5,7 @@ export const paymentIdParamsSchema = z.object({ id: z.string().uuid() });
 export type PaymentIdParams = z.infer<typeof paymentIdParamsSchema>;
 export const paymentIdParamsJsonSchema = {
   type: "object",
-  properties: { id: { type: "string", format: "uuid" } },
-  required: ["id"],
+  properties: { id: { type: "string", description: "UUID" } },
 } as const;
 
 export const paymentHistoryQuerySchema = paginationQuerySchema;

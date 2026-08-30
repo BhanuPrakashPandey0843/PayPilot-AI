@@ -47,12 +47,14 @@ const agentCatalogResponseJsonSchema = {
   type: "object",
   properties: {
     success: { type: "boolean" },
-    data: {
-      type: "object",
-      properties: {
-        products: { type: "array", items: agentProductJsonSchema },
-      },
-    },
+    // `data` is the array itself (route handlers call `ok(result.products,
+    // result.meta)`, which puts the array directly in `data` and the
+    // pagination info in the separate top-level `meta`) — NOT an object
+    // wrapping a `products` key. Fastify serializes responses through this
+    // schema (fast-json-stringify), so declaring the wrong shape here
+    // silently mangles the real array into `{}` on the wire instead of
+    // erroring at write time.
+    data: { type: "array", items: agentProductJsonSchema },
     meta: {
       type: "object",
       properties: {

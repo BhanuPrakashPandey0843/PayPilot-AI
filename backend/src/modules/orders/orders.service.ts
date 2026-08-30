@@ -4,7 +4,7 @@ import {
   insertOrderWithItems,
   getOrderByIdScoped,
   getOrderByIdempotencyKeyScoped,
-  updateOrderStatusScoped,
+  casUpdateOrderStatusScoped,
   getOrderItemsForOrder,
   generateOrderNumber,
 } from "./orders.repository.js";
@@ -64,8 +64,25 @@ export async function transitionOrderStatus(
     );
   }
 
-  const updated = await updateOrderStatusScoped(organizationId, orderId, toStatus, executor);
-  if (!updated) throw Errors.notFound("Order not found");
+  // Compare-and-swap on the exact status we just read (concurrency fix).
+  // Under READ COMMITTED, a concurrent writer (e.g. a racing webhook vs.
+  // /verify-payment, or two attempts on the same order failing/succeeding
+  // near-simultaneously) could otherwise have already moved this order
+  // to a DIFFERENT state between our SELECT above and this UPDATE — an
+  // unconditional write would silently overwrite that. If the CAS misses,
+  // re-fetch: reaching the SAME target status some other way is a benign
+  // idempotent race (return the fresh row); reaching any OTHER status is
+  // a genuine conflict and must not be papered over.
+  const updated = await casUpdateOrderStatusScoped(organizationId, orderId, current.status, toStatus, executor);
+  if (!updated) {
+    const fresh = await getOrderByIdScoped(organizationId, orderId, executor);
+    if (!fresh) throw Errors.notFound("Order not found");
+    if (fresh.status === toStatus) return fresh;
+    throw Errors.conflict(
+      `Order was concurrently transitioned to "${fresh.status}" while attempting ${current.status} -> ${toStatus}`,
+      { orderId, from: current.status, attemptedTo: toStatus, actualStatus: fresh.status }
+    );
+  }
 
   emitAudit({
     type: "ORDER_STATUS_CHANGED",

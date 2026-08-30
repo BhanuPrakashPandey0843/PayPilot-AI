@@ -31,5 +31,7 @@ export const Errors = {
     new AppError(409, "CONFLICT", message, details),
   unprocessable: (message: string, details?: unknown) =>
     new AppError(422, "UNPROCESSABLE_ENTITY", message, details),
+  tooManyRequests: (message = "Too many requests", details?: unknown) =>
+    new AppError(429, "TOO_MANY_REQUESTS", message, details),
   internal: (message = "Something went wrong") => new AppError(500, "INTERNAL_ERROR", message),
 };

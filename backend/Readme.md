@@ -3,7 +3,9 @@
 Fastify + TypeScript API for PayPilot AI (Razorpay Track 01 — AI Growth & Agentic Commerce).
 Multi-tenant Postgres (Drizzle ORM), JWT auth with bcrypt, **database-backed RBAC** resolved
 fresh on every request, organization-scoped queries at the repository layer, Zod validation,
-Swagger/OpenAPI docs, and the Razorpay SDK for test-mode payments (Milestone 3+).
+Swagger/OpenAPI docs, an AI Commerce Agent, and an **end-to-end Razorpay test-mode checkout**
+with a policy-gated, inventory-safe, idempotent payment flow and a persisted audit trail
+(Milestone 5).
 
 ## Stack
 
@@ -66,8 +68,12 @@ A missing/invalid variable crashes the process **before** the server starts list
 | `REDIS_URL` | ✅ | — | ioredis client connection (reserved for future caching + rate limits) |
 | `JWT_SECRET` | ✅ (≥16 chars) | — | HS256 signing secret for `@fastify/jwt` |
 | `JWT_EXPIRES_IN` | | `7d` | Token lifetime. Accepts `@fastify/jwt` format: `"15m"`, `"1h"`, `"7d"`, … |
-| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | | — | Test-mode Razorpay credentials (Milestone 3+) |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | for checkout | — | Test-mode Razorpay credentials (Milestone 5). Without these, `/checkout/*` fails closed with `PAYMENT_PROVIDER_NOT_CONFIGURED` instead of a confusing 500 elsewhere. |
+| `RAZORPAY_WEBHOOK_SECRET` | for webhooks | — | Configured on the Razorpay Dashboard under Settings > Webhooks. **Not** the same value as `RAZORPAY_KEY_SECRET`. |
 | `CORS_ORIGIN` | | `http://localhost:3000` | Allowed origin (frontend) |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | | — | Milestone 6 AI copilot provider. Both optional — set at most one; falls back to a deterministic template if neither is set. |
+| `ABANDONED_CHECKOUT_THRESHOLD_MINUTES` / `REVENUE_DROP_THRESHOLD_PERCENT` / `MIN_CROSS_SELL_SAMPLE_SIZE` | | `180` / `10` / `5` | Deterministic revenue-opportunity detection thresholds (Milestone 6). |
+| `REVENUE_ACTION_MAX_AMOUNT_MINOR` | | `10000000` (₹1,00,000) | Milestone 6 policy engine — max `estimatedRevenueImpact` an APPROVED opportunity may have and still be auto-executable via `POST /revenue/opportunities/:id/execute`. Above this, it must be actioned manually. |
 
 ## Demo data — Velocity Run (fictional merchant)
 
@@ -184,6 +190,231 @@ downstream. All endpoints require Bearer auth and the `ai.read` permission.
 Product search results include an explainable `matchScore` (0–100) with a
 `matchReasons` array (budget fit, category/tag match, in-stock) — every ranking
 decision traces back to a rule, never an opaque model output.
+
+### Checkout (`/api/v1/checkout`) — Milestone 5
+
+End-to-end Razorpay **test-mode** checkout. This is the only place in the codebase
+allowed to call Razorpay — the AI commerce agent (or any other caller) can request a
+checkout, but never calls Razorpay directly:
+
+```
+AI / frontend -> checkout.service -> policy engine -> inventory reservation -> Razorpay
+```
+
+Both endpoints require Bearer auth and **`ai.execute`** (not `ai.read` — reading the
+catalog and spending money are different permission tiers).
+
+| Method | Route | Notes |
+|---|---|---|
+| POST | `/api/v1/checkout/create-order` | Body: `{ sessionId, customerId, idempotencyKey? }`. **No `amount` field exists on this endpoint at all** — the server always computes it from the session's cart via the same `buildOrderPreview()` the commerce agent already uses. Runs the policy engine, atomically reserves inventory, creates the internal `orders`/`order_items`/`payment_attempts` rows in one DB transaction, then creates the Razorpay order (outside the transaction). Idempotent: a retried request with the same `idempotencyKey` (or the same session+cart+customer, if none is supplied) replays the existing in-flight checkout instead of creating a duplicate Razorpay order. Retrying a *failed* checkout with the same key creates a new payment attempt against the *same* order rather than a second order. |
+| POST | `/api/v1/checkout/verify-payment` | Body: `{ razorpayOrderId, razorpayPaymentId, razorpaySignature }`. Verifies the signature server-side via `RAZORPAY_KEY_SECRET` — never trusts a client-reported success status, amount, or organization id. Marks the order `paid`; idempotent against a webhook that races or arrives first. |
+
+### Payments (`/api/v1/payments`) — read-only
+
+Requires `payments.read`. Never exposes provider secrets or RBAC internals.
+
+| Method | Route | Notes |
+|---|---|---|
+| GET | `/api/v1/payments/:id` | Single captured payment, organization-scoped (404 across tenants). |
+| GET | `/api/v1/payments/history` | Paginated, organization-scoped payment history. |
+
+### Webhooks (`/api/v1/webhooks/razorpay`)
+
+**Not** protected by Bearer-JWT auth — Razorpay itself is the caller. Protected instead
+by verifying the `X-Razorpay-Signature` header (HMAC-SHA256) against `RAZORPAY_WEBHOOK_SECRET`
+and the **exact raw bytes** of the request body (a route-local Fastify content-type parser
+captures these; see `modules/payments/webhook.routes.ts`). Handles `payment.authorized`,
+`payment.captured`, and `payment.failed`. Every event is durably deduplicated in the
+`webhook_events` table (`UNIQUE(provider, event_id)`) **before** any state changes — a
+redelivered event is acknowledged with 200 and a `WEBHOOK_DUPLICATE_IGNORED` audit event,
+never double-processed. Configure this exact URL on the Razorpay Dashboard under
+Settings > Webhooks.
+
+### Audit (`/api/v1/audit`)
+
+Requires `audit.read`. Organization-scoped, paginated, filterable by `resourceType` /
+`resourceId` / `action`. This is what answers "who did what, when, and why" for every
+AI action, checkout step, policy decision, payment transition, and webhook event —
+see the Audit trail section below.
+
+### Analytics (`/api/v1/analytics`) — Milestone 6
+
+Requires `analytics.read`. Every endpoint is organization-scoped and backed by
+`analytics.repository.ts`'s single-purpose SQL aggregations — no number here is
+LLM-generated.
+
+| Method | Route | Notes |
+|---|---|---|
+| GET | `/api/v1/analytics/overview` | Revenue/order/payment KPI overview for `?range=today\|7d\|30d\|90d` (default `30d`): total revenue, order count, payment success rate, average order value, growth vs. previous period, top product. |
+| GET | `/api/v1/analytics/revenue-series` | Current vs. previous equal-length period + a daily revenue series. |
+| GET | `/api/v1/analytics/top-products` | Per-product revenue/units/orders/avg price, paginated + sortable. |
+| GET | `/api/v1/analytics/payment-health` | Success/failure/pending breakdown, failure reasons, repeat-failure-customer signal. |
+
+### Revenue Opportunities (`/api/v1/revenue`) — Milestone 6
+
+Deterministically detected, evidence-backed revenue opportunities with transparent
+scoring (see the `SCORING_FORMULA` doc comment at the top of `revenue.engine.ts` —
+every point is traceable by hand from the persisted row). Detects `CROSS_SELL`,
+`UPSELL`, `PAYMENT_RECOVERY`, `ABANDONED_CHECKOUT`, `REVENUE_DROP`. Re-running
+detection is always safe: the `(organization_id, dedupe_key)` unique index makes it
+an upsert, never a duplicate.
+
+| Method | Route | Permission | Notes |
+|---|---|---|---|
+| POST | `/api/v1/revenue/detect` | `analytics.read` | Runs every detector now and upserts results. |
+| GET | `/api/v1/revenue/opportunities` | `analytics.read` | Paginated, filterable by `type`/`status`/`severity`, sortable. |
+| GET | `/api/v1/revenue/opportunities/:id` | `analytics.read` | Full detail including `evidence`. |
+| POST | `/api/v1/revenue/opportunities/:id/approve` | `ai.execute` | `OPEN -> APPROVED`. |
+| POST | `/api/v1/revenue/opportunities/:id/reject` | `ai.execute` | `OPEN -> REJECTED`, optional `{ reason }`. |
+| POST | `/api/v1/revenue/opportunities/:id/execute` | `ai.execute` | `APPROVED -> EXECUTING -> EXECUTED\|FAILED`. See below. |
+
+**Action execution (Phase 7/8/9).** `POST .../execute` first runs the deterministic
+policy engine (`modules/revenue/action-policy.service.ts` — status is `APPROVED`,
+approval not expired, action type is one this system can actually carry out,
+`estimatedRevenueImpact` is within `REVENUE_ACTION_MAX_AMOUNT_MINOR`). A `BLOCKED`
+result is a `422` with the specific failing checks and changes nothing.
+
+Only two `recommendedAction.actionType` values have a real backend execution path
+today — `review_failed_payments` (PAYMENT_RECOVERY) and `follow_up_abandoned_checkout`
+(ABANDONED_CHECKOUT) — because they're the only ones this codebase can carry out
+without a human doing something outside it (sending an email, applying a manual
+discount). Execution **prepares** a fresh Razorpay payment attempt/order for the
+affected order(s) by reusing `checkout.service.ts`'s own retry/idempotent-order code
+path verbatim — it does not and cannot charge the buyer directly, because no payment
+gateway lets a merchant unilaterally debit a buyer without the buyer completing their
+own authorization step. That's the correct fintech boundary (see the spec's own
+Phase-11 example: *"ACTION: Prepare a recovery attempt. APPROVAL: Merchant approval
+required before execution."*), not a shortcut. `CROSS_SELL`/`UPSELL`/`REVENUE_DROP`
+opportunities are pure recommendations with no automatable action — the policy engine
+`BLOCK`s execution for them with a clear reason instead of fabricating a result;
+approve/reject still work normally for these, they just can't be "executed."
+
+Execution is idempotent under concurrency: the `APPROVED -> EXECUTING` transition is a
+compare-and-swap (`revenue.repository.ts casTransitionOpportunityExecution`), so two
+overlapping execute requests for the same opportunity can never both run the action
+body. An opportunity already `EXECUTING`/`EXECUTED`/`FAILED` returns `409`.
+
+**Requires a migration.** This adds four nullable columns to `revenue_opportunities`
+(`executed_by`, `executed_at`, `execution_result`, `execution_failure_reason`) — run
+`npm run db:generate && npm run db:migrate` before using `/execute`.
+
+### AI Copilot (`/api/v1/merchant/ai`) — Milestone 6
+
+Requires `ai.read` (never `ai.execute` — this endpoint never moves money). The
+copilot can only see organization data through a bounded, read-only tool layer
+(`copilot.tools.ts`: revenue overview/trend, product/payment analytics, revenue
+opportunities, opportunity detail, product recommendations) — no direct DB access,
+no client-suppliable `organizationId`. Provider is abstracted (`modules/ai/`):
+Anthropic or OpenAI if configured (`ANTHROPIC_API_KEY`/`OPENAI_API_KEY`, at most one),
+falling back to a deterministic template if neither is set or the configured
+provider errors mid-conversation.
+
+| Method | Route | Notes |
+|---|---|---|
+| POST | `/api/v1/merchant/ai/chat` | Body: `{ message }`. Bounded agentic tool loop (max 4 iterations). Response: `{ reply, provider, toolCalls[] }`. |
+
+### Checkout flow, state machines, and safety guarantees
+
+```
+AI recommends product -> buyer confirms -> POST /checkout/create-order
+    -> policy engine (reuses commerce-agent's checkPolicies/buildOrderPreview)
+    -> DB transaction: reserve inventory (atomic, race-safe) + create order ("pending")
+       + order_items snapshot + payment_attempt ("created")
+    -> [outside the transaction] Razorpay order created -> attempt -> "pending"
+    -> frontend opens Razorpay Checkout with { keyId, razorpayOrderId, amount }
+    -> buyer pays -> POST /checkout/verify-payment (signature-verified) AND/OR
+       POST /webhooks/razorpay (payment.captured, signature-verified) -> order "paid"
+```
+
+**Money safety.** All amounts are server-calculated integer minor units (paise) via
+the existing `buildOrderPreview()` — the checkout request body has no amount field to
+tamper with in the first place.
+
+**Payment attempt state machine** (centralized in `payment.service.ts` — nowhere else
+is allowed to write `payment_attempts.status`):
+
+```
+created -> pending -> authorized -> captured   (happy path)
+pending -> failed                              (payment failure)
+created/pending -> cancelled                   (buyer abandoned)
+```
+
+captured/failed/cancelled are terminal *for that attempt* — a retry creates a **new**
+attempt (`attemptNumber` + 1) against the same order, never reopens a terminal one.
+
+**Order state machine** (centralized in `orders.service.ts`): `pending -> paid | failed | cancelled`,
+and `failed -> pending` is the one controlled backend-owned transition that powers retry.
+
+**Inventory safety.** Inventory is reserved atomically in the *same* transaction as order
+creation, using a single `UPDATE ... WHERE inventory_quantity >= quantity` (the race-safety
+guard is inside the SQL statement itself, not a separate check-then-act). If a payment
+ultimately fails with no further attempt in flight, the reserved stock is restored
+(`INVENTORY_RESTORED` audit event) so it isn't permanently lost to other buyers. A retry
+re-reserves inventory from scratch — if someone else bought the last units in the meantime,
+the retry itself fails with a clear 409 rather than overselling.
+
+**Idempotency.** Enforced at the database level via `UNIQUE(organization_id, idempotency_key)`
+on `orders` (Phase 26 explicitly requires this NOT be solved with only an in-memory guard
+— it has to survive multiple server instances). Webhook idempotency is the same pattern
+applied to `webhook_events` via `UNIQUE(provider, event_id)`.
+
+**Failure handling (required demo scenario).** A failed payment: `payment_attempt -> FAILED`,
+`order -> FAILED` (if no other attempt is in flight), inventory restored, `PAYMENT_FAILED`
+audit event recorded, and the API returns `{ success: false, error: { code, message, details: { retryable: true } } }`
+so the frontend can show "Payment failed. Your order is still safe. You can retry." A
+subsequent `POST /checkout/create-order` with the same `idempotencyKey` creates a *new*
+payment attempt (and a *new* Razorpay order) against the *same* order and can succeed.
+
+**AI never touches money directly (Rule 4).** The AI commerce agent can request
+"create checkout," but every request still goes through authentication, `ai.execute`
+RBAC, the policy engine, inventory checks, server-side amount calculation, organization
+ownership checks, and audit logging — there is no code path from the AI straight to
+Razorpay.
+
+## Audit trail
+
+`src/utils/audit.ts`'s `emitAudit()` now persists every event to the **`audit_logs`**
+table (Milestone 5, Phase 15) in addition to the structured stdout log — the DB write
+is fire-and-forget (never awaited by the request path) so a DB hiccup can never break
+auth, checkout, or any other critical path. Query it via `GET /api/v1/audit`.
+
+Event types added in Milestone 5: `CHECKOUT_REQUESTED`, `CHECKOUT_IDEMPOTENT_REPLAY`,
+`CHECKOUT_RETRY_REQUESTED`, `CHECKOUT_FAILED`, `POLICY_CHECK_STARTED`, `POLICY_APPROVED`,
+`POLICY_REJECTED`, `INVENTORY_RESERVED`, `INVENTORY_RESTORED`, `ORDER_CREATED`,
+`ORDER_STATUS_CHANGED`, `RAZORPAY_ORDER_CREATED`, `RAZORPAY_ORDER_CREATE_FAILED`,
+`PAYMENT_INITIATED`, `PAYMENT_VERIFICATION_STARTED`, `PAYMENT_VERIFIED`,
+`PAYMENT_SIGNATURE_INVALID`, `PAYMENT_CAPTURED`, `PAYMENT_AUTHORIZED`, `PAYMENT_FAILED`,
+`WEBHOOK_RECEIVED`, `WEBHOOK_SIGNATURE_INVALID`, `WEBHOOK_DUPLICATE_IGNORED`,
+`WEBHOOK_PROCESSING_FAILED`.
+
+Every event still carries WHO (actor: `USER` / `AI_AGENT` / `SYSTEM` + id), WHAT
+(action + resource), WHEN (timestamp), WHY (`reason`), and RESULT (`metadata`) —
+secrets are scrubbed before persistence (same `scrub()` used for the stdout log).
+
+## Manual Test Mode verification (Phase 29)
+
+1. Get real Razorpay **test-mode** keys from https://dashboard.razorpay.com/app/keys
+   and set `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` in `.env`.
+2. (For webhooks) Register `https://<your-tunnel>/api/v1/webhooks/razorpay` on the
+   Razorpay Dashboard under Settings > Webhooks, select `payment.authorized`,
+   `payment.captured`, `payment.failed`, and copy the generated secret into
+   `RAZORPAY_WEBHOOK_SECRET`.
+3. `npm run db:generate && npm run db:migrate && npm run db:seed`, then `npm run dev`.
+4. Register/login via `POST /api/v1/auth/*`, create a customer via `POST /api/v1/customers`.
+5. Use the AI commerce chat (`POST /api/v1/commerce/chat`) to search and add a product to the cart.
+6. `POST /api/v1/checkout/create-order` with `{ sessionId, customerId }` — note the
+   returned `razorpayOrderId` and `keyId`.
+7. Open Razorpay's test-mode Checkout (frontend) with those values, or call
+   Razorpay's test APIs directly, and complete a **test card/UPI** payment.
+8. Either call `POST /api/v1/checkout/verify-payment` with the returned
+   `razorpay_payment_id`/`razorpay_signature`, or just wait for the webhook to arrive.
+9. `GET /api/v1/payments/:id` / `GET /api/v1/payments/history` show the captured payment.
+10. `GET /api/v1/audit?resourceType=order&resourceId=<orderId>` shows the full,
+    explainable lifecycle end to end.
+11. To see the required failure-handling demo: use a Razorpay test card configured to
+    fail, or call `/verify-payment` with a deliberately wrong `razorpaySignature` —
+    the order stays safe, then retry `POST /checkout/create-order` with the same
+    `idempotencyKey` and complete payment successfully the second time.
 
 ### Exploring via Swagger UI
 
@@ -363,26 +594,40 @@ Database constraint tests (standalone, rolls everything back) are in
 [scripts/validate-step1.ts](file:///d:/PayPilot%20AI/backend/scripts/validate-step1.ts):
 5/5 PASS (cross-tenant customer/payment, payment↔order consistency, org delete restriction, order delete restriction).
 
-## What's intentionally NOT built yet (Milestone 5+)
+## Milestone status
 
-Milestone 4 (AI Commerce Agent — conversational search, cart, policy engine, order
-preview) is now built; see the Commerce Agent section above and
-[tests/commerce.test.ts](file:///d:/PayPilot%20AI/backend/tests/commerce.test.ts).
-Per the project brief, these still come next:
+- **Milestone 4** (AI Commerce Agent — conversational search, cart, policy engine,
+  order preview): built. See the Commerce Agent section above and
+  [tests/commerce.test.ts](file:///d:/PayPilot%20AI/backend/tests/commerce.test.ts).
+- **Milestone 5** (Razorpay test-mode checkout, payment state machine, webhook
+  verification + idempotency, persisted audit trail, inventory
+  reservation/restoration, Redis-backed rate limiting): built. See
+  `src/modules/checkout/`, `src/modules/payments/`, `src/modules/audit/`, and
+  [tests/checkout.test.ts](file:///d:/PayPilot%20AI/backend/tests/checkout.test.ts) /
+  [tests/webhook.test.ts](file:///d:/PayPilot%20AI/backend/tests/webhook.test.ts).
+  `emitAudit()` now persists to the `audit_logs` table (see `src/utils/audit.ts`)
+  in addition to structured stdout logging.
+- **Milestone 6** (AI Revenue Growth Engine + Merchant Analytics — deterministic
+  revenue opportunities, analytics KPIs, AI copilot, bounded action execution with a
+  policy engine): built. See `src/modules/analytics/`, `src/modules/revenue/`
+  (including `action-policy.service.ts` and `revenue.execution.ts`), `src/modules/copilot/`.
 
-- Razorpay order creation + test-mode checkout capture + webhook verification
-- Orders module + inventory decrement at order time (uses `products` ↔ `order_items` FK)
-- Persisted audit trail (DB table + admin viewer) — today `emitAudit()` logs structured
-  events to stdout only; see `src/utils/audit.ts` for the swap-in seam.
-- Redis-backed rate limiting on auth endpoints + hot catalog read caching.
+## Still open
+
 - AI-generated (LLM) intent extraction — both the agent search endpoint and the
   commerce-agent's intent/filter extraction are deterministic pattern-matching today;
-  wiring an actual model in is later (see `IntentExtractor` in `intent.service.ts`).
-- Finance / admin analytics views.
-- Frontend dashboard (auth-protected).
-
-
-
+  wiring an actual model in is optional future work (see `IntentExtractor` in
+  `intent.service.ts`). The Milestone 6 copilot layer does support an optional
+  LLM (`ANTHROPIC_API_KEY`/`OPENAI_API_KEY`) with a deterministic template fallback.
+- Frontend dashboard (auth-protected) consuming this API.
+- Hot catalog read caching (Redis is wired for rate limiting only, not caching).
+- Integration tests for `analytics`, `revenue` (including the `/execute` policy engine
+  and idempotency), `copilot`, and `audit` — `tests/` currently only covers auth, agent,
+  commerce, checkout, webhook. Next up.
+- `POST /revenue/opportunities/:id/execute` requires running
+  `npm run db:generate && npm run db:migrate` first (see the Revenue Opportunities
+  section above) — not yet applied/verified in this environment; typecheck/build/test
+  have not been re-run since this change either. Run them and report back.
 
 
 

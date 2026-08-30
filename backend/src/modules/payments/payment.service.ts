@@ -11,7 +11,8 @@ import { Errors } from "../../utils/errors.js";
 import { emitAudit, type AuditActorType } from "../../utils/audit.js";
 import { isValidAttemptTransition, type PaymentAttemptStatus } from "./payment.constants.js";
 import {
-  updatePaymentAttempt,
+  casUpdatePaymentAttemptStatus,
+  getPaymentAttemptByIdScoped,
   insertPayment,
   listActiveAttemptsForOrder,
   claimWebhookEventOnce,
@@ -27,19 +28,42 @@ interface ActorInfo {
   actorType?: AuditActorType;
 }
 
+export interface TransitionOutcome {
+  attempt: PaymentAttempt;
+  /**
+   * true  = this call performed the actual state change.
+   * false = a concurrent writer had already reached `toStatus` first (a
+   *         benign race); the row is unchanged by THIS call. Callers with
+   *         additional side effects gated on the transition itself
+   *         (captureAttempt's payment insert, failAttempt's inventory
+   *         restore) must check this and skip those side effects when
+   *         `applied` is false, or they'd run twice for the same event.
+   */
+  applied: boolean;
+}
+
 /**
  * Applies a validated status transition to a payment attempt. Rejects
  * (throws Errors.conflict) any transition not in ATTEMPT_STATUS_TRANSITIONS
  * — e.g. a stale/replayed webhook can never move a `captured` attempt
  * back to `pending`.
+ *
+ * Concurrency-safe: the actual write is a compare-and-swap on the exact
+ * status `attempt` was read at (see payment.repository.ts
+ * `casUpdatePaymentAttemptStatus`). Two callers racing on the same
+ * attempt (e.g. a Razorpay webhook and a racing /verify-payment call)
+ * can no longer have the second one blindly overwrite what the first
+ * one just committed — the loser re-fetches and either finds the SAME
+ * target state already reached (idempotent, returns `applied: false`)
+ * or a genuinely conflicting state (throws).
  */
 export async function transitionAttempt(
   executor: Executor,
   attempt: PaymentAttempt,
   toStatus: PaymentAttemptStatus,
-  extra: Partial<{ providerPaymentId: string | null; failureCode: string | null; failureMessage: string | null }> = {},
+  extra: Partial<{ providerPaymentId: string | null; providerOrderId: string | null; failureCode: string | null; failureMessage: string | null }> = {},
   actor: ActorInfo = { actorType: "SYSTEM" }
-): Promise<PaymentAttempt> {
+): Promise<TransitionOutcome> {
   if (!isValidAttemptTransition(attempt.status, toStatus)) {
     throw Errors.conflict(`Invalid payment attempt transition: ${attempt.status} -> ${toStatus}`, {
       attemptId: attempt.id,
@@ -48,8 +72,19 @@ export async function transitionAttempt(
     });
   }
 
-  const updated = await updatePaymentAttempt(executor, attempt.id, { status: toStatus, ...extra });
-  if (!updated) throw Errors.notFound("Payment attempt not found");
+  const updated = await casUpdatePaymentAttemptStatus(executor, attempt.id, attempt.status, { status: toStatus, ...extra });
+
+  if (!updated) {
+    // Lost the race — someone else wrote to this row between our caller's
+    // read and this UPDATE. Find out what actually happened.
+    const fresh = await getPaymentAttemptByIdScoped(attempt.organizationId, attempt.id, executor);
+    if (!fresh) throw Errors.notFound("Payment attempt not found");
+    if (fresh.status === toStatus) return { attempt: fresh, applied: false }; // same target reached by a concurrent writer — idempotent
+    throw Errors.conflict(
+      `Payment attempt was concurrently transitioned to "${fresh.status}" while attempting ${attempt.status} -> ${toStatus}`,
+      { attemptId: attempt.id, from: attempt.status, attemptedTo: toStatus, actualStatus: fresh.status }
+    );
+  }
 
   emitAudit({
     type:
@@ -65,7 +100,7 @@ export async function transitionAttempt(
     context: { reason: `Payment attempt transitioned ${attempt.status} -> ${toStatus}` },
   });
 
-  return updated;
+  return { attempt: updated, applied: true };
 }
 
 /**
@@ -84,7 +119,12 @@ export async function captureAttempt(
 ): Promise<void> {
   if (attempt.status === "captured") return; // already handled — idempotent replay
 
-  await transitionAttempt(executor, attempt, "captured", { providerPaymentId: razorpayPaymentId }, actor);
+  const { applied } = await transitionAttempt(executor, attempt, "captured", { providerPaymentId: razorpayPaymentId }, actor);
+  // A concurrent writer (e.g. the webhook and /verify-payment racing for
+  // the same payment) already captured this exact attempt first — it
+  // already inserted the `payments` row and transitioned the order.
+  // Doing so again would hit the unique index on payments.payment_attempt_id.
+  if (!applied) return;
 
   await insertPayment(executor, {
     organizationId: attempt.organizationId,
@@ -118,7 +158,11 @@ export async function failAttempt(
 ): Promise<void> {
   if (attempt.status === "failed") return; // already handled
 
-  await transitionAttempt(executor, attempt, "failed", { failureCode, failureMessage }, actor);
+  const { applied } = await transitionAttempt(executor, attempt, "failed", { failureCode, failureMessage }, actor);
+  // A concurrent writer already marked this exact attempt failed (and, if
+  // applicable, already restored inventory / flipped the order) — doing
+  // it again would double-restore stock that was only reserved once.
+  if (!applied) return;
 
   const stillActive = await listActiveAttemptsForOrder(attempt.orderId, executor);
   if (stillActive.length === 0) {

@@ -17,6 +17,7 @@ import { db } from "../../db/index.js";
 import { razorpayGateway, isRazorpayWebhookConfigured } from "./razorpay.client.js";
 import { emitAudit } from "../../utils/audit.js";
 import { ok, fail } from "../../utils/response.js";
+import { rateLimit } from "../../middleware/rateLimit.js";
 import {
   getPaymentAttemptByProviderOrderId,
 } from "./payment.repository.js";
@@ -74,6 +75,12 @@ export async function webhookRoutes(app: FastifyInstance) {
   app.post(
     "/razorpay",
     {
+      // Keyed by source IP, not org/user (there is no authenticated user
+      // on this route — the caller is Razorpay itself). A generous ceiling:
+      // this must never throttle away legitimate Razorpay delivery traffic
+      // (a busy account can fire many events in a burst), it only exists to
+      // cap outright abuse/flooding of an unauthenticated public endpoint.
+      preHandler: [rateLimit({ bucket: "webhook-razorpay", windowSeconds: 60, max: 300, keyFn: (request) => `ip:${request.ip}` })],
       schema: {
         tags: ["Webhooks"],
         summary: "Razorpay webhook receiver",
@@ -173,10 +180,20 @@ export async function webhookRoutes(app: FastifyInstance) {
 async function handleWebhookEvent(eventType: string, paymentEntity?: RazorpayPaymentEntity): Promise<void> {
   if (!paymentEntity) return; // event types we don't act on (e.g. order.paid) — acknowledged, no-op
 
-  const attempt = await getPaymentAttemptByProviderOrderId(paymentEntity.order_id);
-  if (!attempt) return; // not a Razorpay order this system created (different account/env) — nothing to do
-
   await db.transaction(async (tx) => {
+    // Fetched INSIDE the transaction, immediately before use — not before
+    // db.transaction() opens. A fetch taken before the transaction starts
+    // can go stale (e.g. /verify-payment captures this exact attempt in
+    // the gap between the pre-transaction read and this callback running),
+    // and passing that stale object into transitionAttempt/captureAttempt/
+    // failAttempt would have them reason from a status the row no longer
+    // has. payment.service.ts's compare-and-swap is the final backstop,
+    // but reading fresh here keeps that CAS miss the rare exception
+    // instead of the routine case (and avoids Razorpay-order-not-found
+    // fetching "attempt" as a variable name that isn't scoped to tx).
+    const attempt = await getPaymentAttemptByProviderOrderId(paymentEntity.order_id, tx);
+    if (!attempt) return; // not a Razorpay order this system created (different account/env) — nothing to do
+
     switch (eventType) {
       case "payment.authorized":
         if (attempt.status === "pending") {

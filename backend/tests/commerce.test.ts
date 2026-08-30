@@ -17,6 +17,7 @@
  * Every test creates its own org/user/products with random UUID suffixes
  * so the suite is safe to re-run repeatedly without manual cleanup.
  */
+console.log("### COMMERCE_TEST_FILE_MARKER_9f31c2 — if you don't see this exact string in the output, tsx is not executing this file ###");
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -170,6 +171,7 @@ test("(C2) PRODUCT_SEARCH returns ranked, explainable matches", async (t) => {
   assert.equal(body.data.intent, "PRODUCT_SEARCH");
   assert.ok(body.data.products.length >= 1);
   const match = body.data.products[0];
+  console.log("### DEBUG C2 match:", JSON.stringify(match));
   assert.ok(typeof match.matchScore === "number");
   assert.ok(Array.isArray(match.matchReasons) && match.matchReasons.length > 0);
 });
@@ -219,6 +221,7 @@ test("(C4) ADD_TO_CART (explicit productId) updates the session cart", async (t)
     headers: auth(token),
   });
   assert.equal(sessionRes.statusCode, 200);
+  console.log("### DEBUG C4 sessionRes.body:", sessionRes.body);
   const cart = sessionRes.json().data.cart;
   assert.equal(cart.length, 1);
   assert.equal(cart[0].productId, product.id);
@@ -250,6 +253,7 @@ test("(C5) DELETE /commerce/session clears the cart", async (t) => {
     url: `/api/v1/commerce/session?sessionId=${sessionId}`,
     headers: auth(token),
   });
+  console.log("### DEBUG C5 sessionRes.body:", sessionRes.body);
   assert.equal(sessionRes.json().data.cart.length, 0);
 });
 
@@ -273,6 +277,7 @@ test("(C6) sessions are organization-scoped — same sessionId string in two org
     url: `/api/v1/commerce/session?sessionId=${sharedSessionId}`,
     headers: auth(orgB.token),
   });
+  console.log("### DEBUG C6 orgBSession.body:", orgBSession.body);
   assert.equal(orgBSession.statusCode, 200);
   assert.equal(orgBSession.json().data.cart.length, 0, "org B must not see org A's cart");
 });
@@ -293,6 +298,7 @@ test("(C7) order preview FAILs with an explanation when the cart is empty", asyn
     headers: auth(token),
     payload: { sessionId },
   });
+  console.log("### DEBUG C7 res.statusCode:", res.statusCode, "res.body:", res.body);
   assert.equal(res.statusCode, 200, res.body);
   const body = res.json();
   assert.equal(body.data.policy.status, "FAIL");
@@ -356,6 +362,7 @@ test("(C10) GET /commerce/compare returns a side-by-side comparison for 2+ produ
     headers: auth(token),
   });
   assert.equal(res.statusCode, 200, res.body);
+  console.log("### DEBUG C10 res.statusCode:", res.statusCode, "res.body:", res.body);
   const ids = res.json().data.comparison.map((p: { id: string }) => p.id);
   assert.deepEqual(new Set(ids), new Set([p1.id, p2.id]));
 });

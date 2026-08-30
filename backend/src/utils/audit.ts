@@ -76,7 +76,24 @@ export type AuditEventType =
   | "WEBHOOK_RECEIVED"
   | "WEBHOOK_SIGNATURE_INVALID"
   | "WEBHOOK_DUPLICATE_IGNORED"
-  | "WEBHOOK_PROCESSING_FAILED";
+  | "WEBHOOK_PROCESSING_FAILED"
+  // --- Milestone 6: revenue intelligence / AI copilot ---
+  | "ANALYTICS_REQUESTED"
+  | "REVENUE_ANALYSIS_STARTED"
+  | "REVENUE_OPPORTUNITY_CREATED"
+  | "REVENUE_OPPORTUNITY_UPDATED"
+  | "REVENUE_OPPORTUNITY_VIEWED"
+  | "REVENUE_OPPORTUNITY_APPROVED"
+  | "REVENUE_OPPORTUNITY_REJECTED"
+  | "AI_COPILOT_REQUESTED"
+  | "AI_TOOL_CALLED"
+  | "AI_TOOL_CALL_REJECTED"
+  | "AI_RECOMMENDATION_GENERATED"
+  | "AI_PROVIDER_FAILED"
+  | "AI_ACTION_APPROVAL_REQUESTED"
+  | "AI_ACTION_EXECUTED"
+  | "AI_ACTION_FAILED"
+  | "REVENUE_ACTION_POLICY_CHECKED";
 
 export type AuditActorType = "USER" | "AI_AGENT" | "SYSTEM";
 
@@ -103,7 +120,9 @@ interface AuditTarget {
     | "payment_attempt"
     | "checkout"
     | "webhook_event"
-    | "ai_action";
+    | "ai_action"
+    | "revenue_opportunity"
+    | "analytics";
   id?: string;
   extras?: Record<string, unknown>;
 }
@@ -134,6 +153,9 @@ const SENSITIVE_KEYS = new Set([
   "database_url",
   "redis_url",
   "razorpay_key_secret",
+  "anthropic_api_key",
+  "openai_api_key",
+  "api_key",
 ]);
 
 function isSensitiveKey(key: string): boolean {
@@ -229,7 +251,6 @@ export function emitAudit(event: Omit<AuditEvent, "id" | "occurredAt"> & { id?: 
     };
 
     const line = JSON.stringify({ audit: full });
-    // eslint-disable-next-line no-console
     console.log(line);
 
     persistToDatabase(full);

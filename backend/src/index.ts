@@ -14,6 +14,13 @@ import { productsRoutes } from "./modules/products/products.routes.js";
 import { customersRoutes } from "./modules/customers/customers.routes.js";
 import { agentCatalogRoutes } from "./modules/agent/agent.routes.js";
 import { commerceAgentRoutes } from "./modules/commerce-agent/commerce.routes.js";
+import { checkoutRoutes } from "./modules/checkout/checkout.routes.js";
+import { paymentRoutes } from "./modules/payments/payment.routes.js";
+import { webhookRoutes } from "./modules/payments/webhook.routes.js";
+import { auditRoutes } from "./modules/audit/audit.routes.js";
+import { analyticsRoutes } from "./modules/analytics/analytics.routes.js";
+import { revenueRoutes } from "./modules/revenue/revenue.routes.js";
+import { copilotRoutes } from "./modules/copilot/copilot.routes.js";
 
 async function buildServer() {
   const app = Fastify({
@@ -85,6 +92,52 @@ async function buildServer() {
             "explainable recommendations, policy checks, and order previews. Read-only — no payment is ever " +
             "executed here. Requires authentication and the ai.read permission.",
         },
+        {
+          name: "Checkout",
+          description:
+            "End-to-end test-mode checkout: policy-gated, inventory-safe, idempotent order + Razorpay order " +
+            "creation, and payment signature verification. Requires authentication and the ai.execute permission " +
+            "(never ai.read — this moves money). The AI agent never calls Razorpay directly; every checkout goes " +
+            "through here.",
+        },
+        {
+          name: "Payments",
+          description:
+            "Read-only payment records: single payment lookup and organization-scoped payment history. Requires " +
+            "authentication and the payments.read permission.",
+        },
+        {
+          name: "Webhooks",
+          description:
+            "Provider-initiated webhooks. Not protected by Bearer-JWT auth — protected instead by verifying the " +
+            "provider's own request signature.",
+        },
+        {
+          name: "Audit",
+          description:
+            "Organization-scoped audit trail of every AI action, checkout step, policy decision, payment " +
+            "transition, and webhook event. Requires authentication and the audit.read permission.",
+        },
+        {
+          name: "Analytics",
+          description:
+            "Organization-scoped revenue/order/payment analytics — deterministic, backend-calculated KPIs. " +
+            "Requires authentication and the analytics.read permission.",
+        },
+        {
+          name: "Revenue Opportunities",
+          description:
+            "Deterministically detected, evidence-backed revenue opportunities (cross-sell, upsell, payment " +
+            "recovery, abandoned checkout, revenue drop) with transparent scoring and an approval gate. " +
+            "Requires authentication and the analytics.read permission (approve/reject require ai.execute).",
+        },
+        {
+          name: "AI Copilot",
+          description:
+            "Merchant-facing conversational copilot backed by a bounded, read-only tool layer over analytics " +
+            "and revenue opportunities. Never invents numbers, never executes financial actions directly. " +
+            "Requires authentication and the ai.read permission.",
+        },
       ],
     },
   });
@@ -140,13 +193,23 @@ async function buildServer() {
   await app.register(customersRoutes, { prefix: "/api/v1/customers" });
   await app.register(agentCatalogRoutes, { prefix: "/api/v1/agent/catalog" });
   await app.register(commerceAgentRoutes, { prefix: "/api/v1/commerce" });
+  await app.register(checkoutRoutes, { prefix: "/api/v1/checkout" });
+  await app.register(paymentRoutes, { prefix: "/api/v1/payments" });
+  // Registered as its own encapsulated plugin (not nested under another
+  // route file) so its route-local raw-body content parser (needed for
+  // webhook signature verification) can never leak into any other route.
+  await app.register(webhookRoutes, { prefix: "/api/v1/webhooks" });
+  await app.register(auditRoutes, { prefix: "/api/v1/audit" });
+  await app.register(analyticsRoutes, { prefix: "/api/v1/analytics" });
+  await app.register(revenueRoutes, { prefix: "/api/v1/revenue" });
+  await app.register(copilotRoutes, { prefix: "/api/v1/merchant/ai" });
 
   return app;
 }
 
 async function start() {
-  const app = await buildServer();
   try {
+    const app = await buildServer();
     await app.listen({ port: env.PORT, host: env.HOST });
     app.log.info(`🚀 PayPilot AI backend listening on http://${env.HOST}:${env.PORT}`);
     app.log.info(`📚 API docs available at http://${env.HOST}:${env.PORT}/docs`);
@@ -154,9 +217,13 @@ async function start() {
       `🔒 Auth: POST /api/v1/auth/register  →  POST /api/v1/auth/login  →  GET /api/v1/auth/me`
     );
   } catch (err) {
-    app.log.error(err);
+    // buildServer() failures (bad config, plugin registration errors) land
+    // here too now, not just app.listen() failures — previously buildServer()
+    // was awaited outside this try/catch, so a failure there was an
+    // unhandled promise rejection instead of a clean, logged exit.
+    console.error("Failed to start PayPilot AI backend:", err);
     process.exit(1);
   }
 }
 
-start();
+void start();

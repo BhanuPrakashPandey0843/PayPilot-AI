@@ -16,7 +16,7 @@
  * Every key is namespaced by organizationId — a session ID alone is
  * never enough to read another organization's conversation state.
  */
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { env } from "../../config/env.js";
 import { CONVERSATION_TTL_SECONDS } from "./constants.js";
 import type { ConversationSession } from "./types.js";
@@ -128,3 +128,5 @@ export async function deleteSession(organizationId: string, sessionId: string): 
   });
   memoryStore.delete(key);
 }
+
+

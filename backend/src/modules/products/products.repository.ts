@@ -51,7 +51,16 @@ function buildWhere(organizationId: string, filters: ProductFilters) {
   if (filters.tags && filters.tags.length > 0) {
     // Array containment: products.tags @> ARRAY[...] — index-backed via
     // the GIN index on products.tags.
-    conditions.push(sql`${products.tags} @> ${filters.tags}::text[]`);
+    //
+    // IMPORTANT: must be sql.param(...), not a bare interpolated array.
+    // Drizzle's `sql` template gives a plain JS array special treatment —
+    // it spreads it as a parenthesized, comma-separated placeholder list
+    // (the same mechanism `IN (...)` uses), producing `@> ($1, $2)::text[]`,
+    // which is invalid Postgres syntax (that's tuple syntax, not an array
+    // literal) and throws a 500 at query time. sql.param() forces it to
+    // bind as a single parameter instead, which postgres.js serializes as
+    // a real Postgres array.
+    conditions.push(sql`${products.tags} @> ${sql.param(filters.tags)}::text[]`);
   }
   if (filters.search) {
     const term = `%${filters.search}%`;
@@ -237,7 +246,7 @@ export async function getSharedTagScoped(
         eq(products.isActive, true),
         sql`${products.inventoryQuantity} > 0`,
         sql`${products.id} != ${excludeId}`,
-        sql`${products.tags} && ${tags}::text[]` // overlap (shares >=1 tag)
+        sql`${products.tags} && ${sql.param(tags)}::text[]` // overlap (shares >=1 tag) — sql.param() required, see buildWhere()'s tags filter for why
       )
     )
     .orderBy(asc(products.price))

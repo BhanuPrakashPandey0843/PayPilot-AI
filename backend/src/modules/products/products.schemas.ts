@@ -101,13 +101,13 @@ export const listProductsQueryJsonSchema = {
     limit: { type: "integer", default: 20 },
     search: { type: "string" },
     category: { type: "string" },
-    isActive: { type: "string", enum: ["true", "false"] },
+    isActive: { type: "string", description: "'true' or 'false'" },
     minPrice: { type: "integer", description: "Integer minor units, e.g. paise" },
     maxPrice: { type: "integer", description: "Integer minor units, e.g. paise" },
-    available: { type: "string", enum: ["true", "false"], description: "true = inventoryQuantity > 0" },
+    available: { type: "string", description: "'true' or 'false' — true = inventoryQuantity > 0" },
     tags: { type: "string", description: "Comma-separated tags, ALL must match, e.g. running,lightweight" },
-    sort: { type: "string", enum: ["createdAt", "price", "name"], default: "createdAt" },
-    order: { type: "string", enum: ["asc", "desc"], default: "desc" },
+    sort: { type: "string", description: "One of: createdAt, price, name. Default createdAt." },
+    order: { type: "string", description: "One of: asc, desc. Default desc." },
   },
 } as const;
 
