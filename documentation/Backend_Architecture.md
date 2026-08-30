@@ -317,7 +317,7 @@ sequenceDiagram
 
     Note over C,Auth: Registration
     C->>Auth: POST /auth/register { email, password, firstName, lastName, organizationName }
-    Auth->>Auth: Zod: email valid; password 8-128 chars, >=1 letter, >=1 digit
+    Auth->>Auth: Zod validates email, 8-128 char password with >=1 letter and >=1 digit
     Auth->>Auth: bcrypt.hash(password, 12 rounds)
     Auth->>DB: BEGIN TX
     Auth->>DB: INSERT organizations
@@ -456,7 +456,7 @@ erDiagram
         uuid user_id FK
         uuid role_id FK
         enum status
-        note "UNIQUE(organization_id, user_id)"
+        string constraint_note "UNIQUE(organization_id, user_id)"
     }
     ROLES {
         uuid id PK
@@ -474,14 +474,14 @@ erDiagram
         bigint price "integer minor units, >=0"
         int inventory_quantity ">=0"
         bool is_active
-        note "UNIQUE(id, organization_id) for composite FK targets"
+        string constraint_note "UNIQUE(id, organization_id) for composite FK targets"
     }
     CUSTOMERS {
         uuid id PK
         uuid organization_id FK
         varchar external_customer_id "unique per org, nullable"
         enum status "active/inactive/blocked"
-        note "UNIQUE(id, organization_id)"
+        string constraint_note "UNIQUE(id, organization_id)"
     }
     ORDERS {
         uuid id PK
@@ -508,7 +508,7 @@ erDiagram
         enum provider "razorpay"
         enum status "created/pending/authorized/captured/failed/cancelled"
         int attempt_number "1-based, unique per order"
-        note "UNIQUE(id, order_id), UNIQUE(id, organization_id) for composite FK targets"
+        string constraint_note "UNIQUE(id, order_id), UNIQUE(id, organization_id) for composite FK targets"
     }
     PAYMENTS {
         uuid id PK
@@ -523,7 +523,7 @@ erDiagram
         varchar provider
         varchar event_id
         enum status "RECEIVED/PROCESSED/IGNORED/FAILED"
-        note "UNIQUE(provider, event_id) — durable dedupe"
+        string constraint_note "UNIQUE(provider, event_id) - durable dedupe"
     }
     AUDIT_LOGS {
         uuid id PK
@@ -653,7 +653,7 @@ sequenceDiagram
         CO->>DB: COMMIT
         CO->>RZP: create Razorpay order (outside the DB transaction)
         alt Razorpay call fails
-            CO-->>AI: error; order stays pending, retry re-attempts Razorpay call
+            CO-->>AI: error, order stays pending - retry re-attempts Razorpay call
         else success
             CO-->>AI: { razorpayOrderId, keyId, amount, currency }
         end
