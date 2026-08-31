@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -55,7 +56,7 @@ export function Navbar() {
   return (
     <div
       ref={navRef}
-      className="absolute inset-x-0 top-[10px] z-20 mx-auto flex w-[92%] max-w-[360px] flex-col items-center sm:top-5 sm:w-[360px]"
+      className="absolute inset-x-0 top-[10px] z-20 mx-auto flex w-[92%] max-w-[360px] flex-col items-center sm:top-5 sm:w-[460px]"
     >
       <nav
         aria-label="Primary"
@@ -103,6 +104,22 @@ export function Navbar() {
           ))}
         </ul>
 
+        {/* Desktop auth actions */}
+        <div className="hidden items-center gap-3 sm:flex">
+          <Link
+            href="/auth/login"
+            className="text-[13px] font-medium text-white/75 outline-none transition-colors hover:text-white focus-visible:text-white"
+          >
+            Log in
+          </Link>
+          <Link
+            href="/auth/register"
+            className="rounded-full bg-white px-3.5 py-1.5 text-[13px] font-medium text-[#111217] outline-none transition-opacity hover:opacity-90 focus-visible:opacity-90"
+          >
+            Sign up
+          </Link>
+        </div>
+
         <motion.button
           type="button"
           aria-label={isOpen ? "Close menu" : "Open menu"}
@@ -145,11 +162,25 @@ export function Navbar() {
                 </li>
               ))}
             </ul>
-            <div className="mt-1 border-t border-white/10 pt-2">
+            <div className="mt-1 flex flex-col gap-2 border-t border-white/10 pt-2">
+              <Link
+                href="/auth/login"
+                onClick={() => setIsOpen(false)}
+                className="block rounded-[14px] px-3 py-2.5 text-center text-[14px] font-medium text-white/85 outline-none transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:text-white"
+              >
+                Log in
+              </Link>
+              <Link
+                href="/auth/register"
+                onClick={() => setIsOpen(false)}
+                className="block rounded-[14px] bg-white px-3 py-2.5 text-center text-[14px] font-medium text-[#111217] outline-none transition-opacity hover:opacity-90 focus-visible:opacity-90"
+              >
+                Sign up
+              </Link>
               <a
                 href={`mailto:${CONTACT_EMAIL}?subject=Demo%20Request`}
                 onClick={() => setIsOpen(false)}
-                className="block rounded-[14px] bg-white px-3 py-2.5 text-center text-[14px] font-medium text-[#111217] outline-none transition-opacity hover:opacity-90 focus-visible:opacity-90"
+                className="block rounded-[14px] px-3 py-2.5 text-center text-[13px] font-medium text-white/60 outline-none transition-colors hover:text-white focus-visible:text-white"
               >
                 Book a Demo
               </a>

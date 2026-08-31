@@ -77,7 +77,7 @@ export function OpportunityCard({
           selected ? "opacity-100" : "group-hover:opacity-100"
         )}
       >
-        View reasoning <ArrowRight className="h-3 w-3" strokeWidth: {2} />
+        View reasoning <ArrowRight className="h-3 w-3" strokeWidth={2} />
       </div>
     </motion.button>
   );

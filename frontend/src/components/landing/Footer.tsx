@@ -35,28 +35,28 @@ const FOOTER_LINKS: FooterColumn[] = [
   {
     heading: "Company",
     links: [
-      { label: "About Us", href: "#" },
-      { label: "Careers", href: "#" },
-      { label: "Blog", href: "#" },
-      { label: "Contact", href: `mailto:${CONTACT_EMAIL}` },
+      { label: "About Us", href: "/about" },
+      { label: "Agentic Commerce", href: "/agentic-commerce" },
+      { label: "Demo", href: "/demo" },
+      { label: "Contact", href: "/contact" },
     ],
   },
   {
     heading: "Resources",
     links: [
-      { label: "Documentation", href: "#" },
-      { label: "Help Center", href: "#" },
+      { label: "Documentation", href: "/docs" },
+      { label: "Status", href: "/status" },
       { label: "FAQ", href: "#faq" },
-      { label: "Security", href: "#security" },
+      { label: "Security", href: "/security" },
     ],
   },
   {
     heading: "Product",
     links: [
       { label: "Features", href: "#product" },
-      { label: "Pricing", href: "#" },
-      { label: "Integrations", href: "#" },
-      { label: "AI Platform", href: "#product" },
+      { label: "Pricing", href: "/pricing" },
+      { label: "Catalog", href: "/product/catalog" },
+      { label: "AI Platform", href: "/product/ai-agent" },
     ],
   },
 ];
@@ -257,6 +257,12 @@ export function Footer() {
                 className="text-[11px] text-white/40 hover:text-white/70"
               >
                 Terms & Conditions
+              </Link>
+              <Link
+                href="/cookies"
+                className="text-[11px] text-white/40 hover:text-white/70"
+              >
+                Cookies
               </Link>
             </div>
           </div>
