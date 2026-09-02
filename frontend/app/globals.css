@@ -1,8 +1,26 @@
 @import "tailwindcss";
 
+/*
+ * PayPilot AI is a single always-dark product surface (marketing +
+ * dashboard) — not a light site with a dark-mode fallback. These tokens
+ * are the one place the palette is defined; every component should pull
+ * from these vars or the Tailwind classes below rather than hardcoding
+ * hex values, so the whole site stays one system instead of drifting
+ * component-by-component the way it had before.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050810;
+  --background-elevated: #0a0f1c;
+  --foreground: #f4f6fb;
+  --muted: #8b93a7;
+
+  --accent-blue: #3b82f6;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #34d399;
+  --accent-gold: #e8c88a;
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
 }
 
 @theme inline {
@@ -12,15 +30,239 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* ------------------------------------------------------------------ */
+/* Shared depth system — glass, glow, grid, noise. Used deliberately   */
+/* and sparingly (hero, key cards, section dividers) rather than on    */
+/* every element, so it reads as texture, not wallpaper.               */
+/* ------------------------------------------------------------------ */
+
+/* Frosted panel used for the navbar, elevated cards, and modals. */
+.glass-panel {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.02)
+  );
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Soft radial glow, positioned by the caller (e.g. absolute + inset).
+   One shared blur value so every glow in the site reads as the same
+   light source rather than a different intensity per section. */
+.glow-blob {
+  filter: blur(90px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Faint structural grid for hero/section backgrounds — 64px cells,
+   near-invisible until it catches a glow behind it. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 90%);
+}
+
+/* Fixed film-grain noise overlay — inline SVG, no image request. Kept
+   at very low opacity; its job is to stop large navy fields from
+   banding, not to be visible as "texture" on its own. */
+.bg-noise {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+}
+
+/* Gradient text reserved for the one or two AI-related words per
+   headline the brief calls for — never a whole heading. */
+.text-gradient-ai {
+  background: linear-gradient(
+    90deg,
+    var(--accent-blue),
+    var(--accent-cyan) 55%,
+    var(--accent-emerald)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Shared slow idle-float used by decorative card art (Blogs, Faq, etc.) —
+   one definition so the motion stays identical everywhere it's used. */
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+/* Shared "light catching a facet" sweep used by gem/crystal style art
+   (CaseStudies, etc.) — dwells off-screen on each side, sweeps across once
+   per cycle. One definition so every use stays identical. */
+@keyframes sheen-sweep {
+  0%,
+  45% {
+    transform: translateX(-160%) skewX(-20deg);
+  }
+  65%,
+  100% {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+
+.animate-sheen-sweep {
+  animation: sheen-sweep 5s ease-in-out infinite;
+}
+
+/* Continuous receipt-tape scroll used by Hero's full-bleed activity
+   ticker (HeroTicker). Content is duplicated once in the markup so a 50%
+   translate loops seamlessly. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 26s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Signup flow — shake, step transitions, success draw-on check,       */
+/* and a small confetti burst. Scoped names so they're obviously only  */
+/* for that flow if reused elsewhere later.                            */
+/* ------------------------------------------------------------------ */
+
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-4px);
+  }
+  40%,
+  60% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-step-in {
+  animation: step-in 0.4s ease-out;
+}
+
+@keyframes success-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-success-pop {
+  animation: success-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes draw-line {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Circumference of the success check's r=24 circle (~150.8), and the
+   path length of its three-point check mark (~34) — see SuccessCheck
+   in SignupForm.tsx for the actual SVG. */
+.animate-draw-circle {
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: draw-line 0.5s ease-out forwards;
+}
+
+.animate-draw-check {
+  stroke-dasharray: 34;
+  stroke-dashoffset: 34;
+  animation: draw-line 0.4s ease-out 0.45s forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-20px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(160px) rotate(300deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  animation: confetti-fall 1.4s ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake,
+  .animate-step-in,
+  .animate-success-pop {
+    animation: none;
+  }
+
+  .animate-draw-circle,
+  .animate-draw-check {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .animate-confetti {
+    animation: none;
+    opacity: 0;
+  }
 }

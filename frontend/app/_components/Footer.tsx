@@ -1,4 +1,6 @@
-import { Mail, Zap } from "lucide-react";
+import { Mail } from "lucide-react";
+import { SectionBadge } from "./SectionBadge";
+import { BrandLogo } from "./BrandLogo";
 
 const PAGE_LINKS = [
   { label: "Home", href: "/" },
@@ -27,10 +29,7 @@ export default function Footer() {
         {/* Newsletter */}
         <div className="flex flex-col gap-8 border-b border-white/10 pb-12 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-              Newsletter
-            </p>
+            <SectionBadge label="Newsletter" />
             <h2 className="mt-4 max-w-md text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               Get operational insights and signals, straight to your inbox
             </h2>
@@ -56,9 +55,7 @@ export default function Footer() {
         <div className="flex flex-col gap-12 py-12 lg:flex-row lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-500/15 text-blue-400">
-                <Zap className="h-3.5 w-3.5" />
-              </span>
+              <BrandLogo className="h-6 w-[54px]" />
               <span className="text-lg font-semibold text-white">PayPilot AI</span>
             </div>
             <p className="mt-3 text-sm text-zinc-500">
@@ -119,7 +116,9 @@ export default function Footer() {
         aria-hidden="true"
         className="pointer-events-none flex items-center justify-center gap-3 overflow-hidden pb-4 text-[18vw] leading-none font-bold text-white/[0.04] select-none sm:gap-4"
       >
-        <Zap className="h-[12vw] w-[12vw]" strokeWidth={1.5} />
+        <span className="opacity-[0.55]">
+          <BrandLogo className="h-[12vw] w-[26.9vw]" />
+        </span>
         PayPilot
       </div>
     </footer>

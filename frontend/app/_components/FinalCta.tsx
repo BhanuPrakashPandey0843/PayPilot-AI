@@ -10,11 +10,12 @@ export function FinalCta() {
   return (
     <section className="bg-black px-6 py-24 text-center">
       <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-        Start automating your business today
+        Find the revenue you&apos;re already losing
       </h2>
       <p className="mx-auto mt-4 max-w-md text-base text-zinc-400 sm:text-lg">
-        Ready to stop doing manually what AI can handle automatically?
-        Let&apos;s talk.
+        Point PayPilot AI at your Razorpay catalog and see failed payments,
+        abandoned checkouts, and missed upsells surfaced as ranked,
+        explainable actions — policy-checked before anything runs.
       </p>
 
       <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">

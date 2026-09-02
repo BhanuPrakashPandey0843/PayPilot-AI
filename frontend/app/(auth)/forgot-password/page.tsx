@@ -1,10 +1,12 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import type { Metadata } from "next";
+import { ForgotPasswordExperience } from "@/app/_components/forgot-password/ForgotPasswordExperience";
+
+export const metadata: Metadata = {
+  title: "Forgot Password — PayPilot AI",
+  description: "Reset the password for your PayPilot AI merchant workspace.",
+  robots: { index: false, follow: false },
+};
 
 export default function ForgotPasswordPage() {
-  return (
-    <PagePlaceholder
-      title="Forgot Password"
-      description="Enter email, send reset link, confirmation message."
-    />
-  );
+  return <ForgotPasswordExperience />;
 }
