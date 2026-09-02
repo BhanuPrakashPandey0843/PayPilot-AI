@@ -1,24 +1,17 @@
 import type { ReactNode } from "react";
+import { DashboardShell } from "../_components/dashboard/DashboardShell";
 
 /**
  * Shared shell for the authenticated merchant application (everything
  * behind Login: Dashboard, AI Copilot, Commerce Assistant, Revenue
  * Opportunities, Products, Orders, Payments, Customers, Analytics, Team
  * Members, Roles & Permissions, Audit Logs, Organization Settings, Security
- * Settings). Per the flow notes: "Maintain consistent layout: Sidebar +
- * Topbar + Content" and "All main app pages require authentication."
+ * Settings). Sidebar + Topbar + Content, per the flow notes.
  *
- * TODO: once auth is wired up, this layout is the right place for the
- * server-side session check / redirect-to-login guard for the whole group.
+ * The session guard (redirect-to-login for an unauthenticated visitor)
+ * lives inside DashboardShell via useSession() — see that hook's doc
+ * comment for why it's a client-side check rather than one here.
  */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex flex-1">
-      {/* TODO: sidebar nav (role-based visibility per flow notes) */}
-      <div className="flex flex-1 flex-col">
-        {/* TODO: topbar */}
-        <main className="flex flex-1 flex-col">{children}</main>
-      </div>
-    </div>
-  );
+  return <DashboardShell>{children}</DashboardShell>;
 }

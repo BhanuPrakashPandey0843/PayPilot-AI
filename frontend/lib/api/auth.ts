@@ -84,3 +84,33 @@ interface ForgotPasswordResponse {
 export function requestPasswordReset(email: string): Promise<ForgotPasswordResponse> {
   return apiClient.post<ForgotPasswordResponse>("/auth/forgot-password", { email });
 }
+
+export interface MeResponse {
+  user: AuthUser;
+  organization: AuthOrganization;
+  // IMPORTANT: unlike login/register (role: string), GET /auth/me
+  // returns role as the full { id, name } row (see auth.service.ts's
+  // getMe — covered by backend test (B5b), which asserts
+  // `body.data.role.name`) — or undefined if the membership lookup
+  // came back empty. Do not assume this matches AuthSession.role's
+  // shape; normalize with the `.name` extraction in getMe() below
+  // rather than fixing it up at every call site.
+  role: { id: string; name: string } | undefined;
+}
+
+/**
+ * GET /auth/me — re-verifies the stored token against the live user
+ * status (see backend authenticate.ts) rather than trusting whatever
+ * was cached in storage at login time. Used by useSession() to catch a
+ * disabled account or a role change without waiting for the token to
+ * expire.
+ *
+ * Normalizes the raw response's `role: { id, name }` down to a plain
+ * role-name string, matching AuthSession.role from login/register —
+ * see the MeResponse doc comment for why that normalization has to
+ * happen here rather than being assumed away.
+ */
+export async function getMe(): Promise<{ user: AuthUser; organization: AuthOrganization; role: string }> {
+  const raw = await apiClient.get<MeResponse>("/auth/me");
+  return { user: raw.user, organization: raw.organization, role: raw.role?.name ?? "" };
+}

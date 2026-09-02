@@ -34,6 +34,25 @@ interface FailEnvelope {
   error: { code: string; message: string; details?: unknown };
 }
 
+/**
+ * Reads the stored session token (lib/auth/session.ts) and returns an
+ * Authorization header when one exists. Harmless to attach on every
+ * request, including the public /auth/login and /auth/register calls
+ * that won't have a token yet (getToken() returns null pre-login, so
+ * the header is simply omitted) — keeps this the one place that knows
+ * how to authenticate a request instead of every call site re-reading
+ * storage itself.
+ */
+function authHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  // Inlined (not imported from lib/auth/session.ts) to dodge a
+  // client.ts <-> auth/session.ts <-> api/auth.ts import cycle. Keep
+  // this key in sync with TOKEN_KEY in lib/auth/session.ts.
+  const TOKEN_KEY = "paypilot_token";
+  const token = window.localStorage.getItem(TOKEN_KEY) ?? window.sessionStorage.getItem(TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
@@ -41,6 +60,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
       headers: {
         "Content-Type": "application/json",
+        ...authHeader(),
         ...init?.headers,
       },
     });

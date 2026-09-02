@@ -12,12 +12,12 @@ interface PagePlaceholderProps {
 export function PagePlaceholder({ title, description }: PagePlaceholderProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 p-16 text-center">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
         Route scaffold — UI pending
       </p>
-      <h1 className="text-2xl font-semibold text-zinc-900">{title}</h1>
+      <h1 className="text-2xl font-semibold text-white">{title}</h1>
       {description ? (
-        <p className="max-w-md text-sm text-zinc-500">{description}</p>
+        <p className="max-w-md text-sm text-zinc-400">{description}</p>
       ) : null}
     </div>
   );
