@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import { CommerceAssistant } from "../../_components/dashboard/commerce/CommerceAssistant";
 
 export default function CommerceAssistantPage() {
-  return (
-    <PagePlaceholder
-      title="Commerce Assistant"
-      description="Search, compare, and preview products with AI."
-    />
-  );
+  return <CommerceAssistant />;
 }

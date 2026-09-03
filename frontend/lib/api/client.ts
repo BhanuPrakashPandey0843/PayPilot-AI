@@ -27,6 +27,14 @@ export class ApiError extends Error {
 interface SuccessEnvelope<T> {
   success: true;
   data: T;
+  meta?: PaginationMeta;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
 interface FailEnvelope {
@@ -53,7 +61,7 @@ function authHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function requestEnvelope<T>(path: string, init?: RequestInit): Promise<SuccessEnvelope<T>> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
@@ -91,7 +99,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     );
   }
 
-  return body.data;
+  return body;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const envelope = await requestEnvelope<T>(path, init);
+  return envelope.data;
 }
 
 export const apiClient = {
@@ -101,4 +114,17 @@ export const apiClient = {
       method: "POST",
       body: payload !== undefined ? JSON.stringify(payload) : undefined,
     }),
+  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  /**
+   * For paginated list endpoints, where the backend sends `meta`
+   * (page/limit/total/totalPages) as a SIBLING of `data`, not nested
+   * inside it (see backend/src/utils/response.ts's `ok(data, meta)`).
+   * `get<T>()` intentionally returns only `data` for the common case —
+   * this variant is for callers that also need `meta.total` etc.
+   */
+  getPaginated: <T>(path: string): Promise<{ data: T; meta?: PaginationMeta }> =>
+    requestEnvelope<T>(path, { method: "GET" }).then((envelope) => ({
+      data: envelope.data,
+      meta: envelope.meta,
+    })),
 };

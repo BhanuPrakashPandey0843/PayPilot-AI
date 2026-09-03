@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import { RolesView } from "../../_components/roles/RolesView";
 
 export default function RolesPermissionsPage() {
-  return (
-    <PagePlaceholder
-      title="Roles & Permissions"
-      description="What each role in this workspace can do."
-    />
-  );
+  return <RolesView />;
 }

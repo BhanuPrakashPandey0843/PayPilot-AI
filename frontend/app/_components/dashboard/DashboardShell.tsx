@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useLayoutEffect, useRef } from "react";
+import gsap from "gsap";
 import { Sidebar } from "./Sidebar";
 import { TopNavbar } from "./TopNavbar";
 import { useSidebar } from "@/hooks/useSidebar";
@@ -21,6 +23,28 @@ import { useSession } from "@/hooks/useSession";
 export function DashboardShell({ children }: { children: ReactNode }) {
   const { session, isLoading, logout } = useSession();
   const { collapsed, toggleCollapsed, mobileOpen, openMobile, closeMobile } = useSidebar();
+  const shellRef = useRef<HTMLDivElement>(null);
+
+  // One-time reveal for sidebar / navbar / content once the real shell
+  // mounts (Step 26 of the dashboard-shell brief). Only fires the first
+  // time this branch renders — i.e. once, right after the loading
+  // spinner above resolves to the real session — never on route
+  // changes within the dashboard, since DashboardShell itself doesn't
+  // remount for those. Skipped entirely under prefers-reduced-motion.
+  useLayoutEffect(() => {
+    if (!shellRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+      tl.from("[data-shell-sidebar]", { xPercent: -100, opacity: 0, duration: 0.5 })
+        .from("[data-shell-navbar]", { y: -16, opacity: 0, duration: 0.4 }, "-=0.25")
+        .from("[data-shell-main]", { y: 12, opacity: 0, duration: 0.4 }, "-=0.2");
+    }, shellRef);
+
+    return () => ctx.revert();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (isLoading || !session) {
     return (
@@ -31,7 +55,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--background)]">
+    <div ref={shellRef} className="flex min-h-screen bg-[var(--background)]">
       <Sidebar
         collapsed={collapsed}
         onToggleCollapsed={toggleCollapsed}
@@ -47,7 +71,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           userEmail={session.user.email}
           onLogout={logout}
         />
-        <main className="flex flex-1 flex-col">{children}</main>
+        <main data-shell-main className="flex flex-1 flex-col">
+          {children}
+        </main>
       </div>
     </div>
   );

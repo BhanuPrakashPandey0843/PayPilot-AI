@@ -54,7 +54,10 @@ export function TopNavbar({ onOpenMobile, userName, userEmail, onLogout }: TopNa
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-20 shrink-0 items-center gap-4 border-b border-[var(--border-subtle)] bg-[var(--background)]/95 px-4 backdrop-saturate-150 sm:px-6">
+    <header
+      data-shell-navbar
+      className="sticky top-0 z-30 flex h-20 shrink-0 items-center gap-4 border-b border-[var(--border-subtle)] bg-[var(--background)]/95 px-4 backdrop-saturate-150 sm:px-6"
+    >
       <button
         type="button"
         onClick={onOpenMobile}

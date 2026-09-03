@@ -1,5 +1,7 @@
 # Tech Stack
 
+
+
 This document lists the technologies chosen for PayPilot AI and the reasoning behind each choice, based on the dependencies currently declared in `backend/package.json` and `frontend/package.json`.
 
 ## Backend

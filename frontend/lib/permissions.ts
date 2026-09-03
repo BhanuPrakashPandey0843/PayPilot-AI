@@ -43,7 +43,7 @@ export type PermissionName =
   | "analytics.read"
   | "audit.read";
 
-const ALL_PERMISSIONS: PermissionName[] = [
+export const ALL_PERMISSIONS: PermissionName[] = [
   "organizations.read",
   "organizations.update",
   "users.read",
@@ -67,6 +67,50 @@ const ALL_PERMISSIONS: PermissionName[] = [
   "analytics.read",
   "audit.read",
 ];
+
+export const ROLE_NAMES: RoleName[] = ["ORG_ADMIN", "OPERATIONS", "FINANCE", "SUPPORT", "VIEWER"];
+
+/** Mirrors backend/scripts/seed.ts's ROLE_DESCRIPTIONS — same
+ * hand-duplicated-on-purpose reasoning as the rest of this file. */
+export const ROLE_DESCRIPTIONS: Record<RoleName, string> = {
+  ORG_ADMIN: "Full access to everything within the organization.",
+  OPERATIONS: "Manages catalog, orders, and customers day-to-day.",
+  FINANCE: "Manages payments, refunds, and financial visibility.",
+  SUPPORT: "Read-focused, with limited customer updates for support tasks.",
+  VIEWER: "Read-only access across the organization.",
+};
+
+/** Mirrors backend/scripts/seed.ts's PERMISSION_DEFS. */
+export const PERMISSION_DESCRIPTIONS: Record<PermissionName, string> = {
+  "organizations.read": "View organization details.",
+  "organizations.update": "Update organization settings.",
+  "users.read": "View users and members.",
+  "users.create": "Invite/create users.",
+  "users.update": "Update user details.",
+  "customers.read": "View customers.",
+  "customers.create": "Create customers.",
+  "customers.update": "Update customers.",
+  "catalog.read": "View products in the catalog.",
+  "catalog.create": "Create products.",
+  "catalog.update": "Update products.",
+  "catalog.delete": "Delete products.",
+  "orders.read": "View orders.",
+  "orders.create": "Create orders.",
+  "orders.update": "Update orders.",
+  "payments.read": "View payments and payment attempts.",
+  "payments.create": "Create/initiate payments.",
+  "payments.refund": "Refund payments.",
+  "ai.read": "View AI agent activity and recommendations.",
+  "ai.execute": "Allow the AI agent to take controlled actions (e.g. checkout).",
+  "analytics.read": "View revenue analytics and revenue opportunities.",
+  "audit.read": "View the audit trail.",
+};
+
+/** The part before the dot, e.g. "payments.refund" -> "payments" — used
+ * to group the permission matrix into sections. */
+export function permissionCategory(permission: PermissionName): string {
+  return permission.split(".")[0];
+}
 
 const ROLE_PERMISSIONS: Record<RoleName, PermissionName[]> = {
   ORG_ADMIN: ALL_PERMISSIONS,
@@ -122,6 +166,12 @@ const ROLE_PERMISSIONS: Record<RoleName, PermissionName[]> = {
     "audit.read",
   ],
 };
+
+/** Full permission list for a role — same data roleHasPermission checks
+ * against, exposed directly for the Roles & Permissions page's matrix. */
+export function permissionsForRole(role: RoleName): PermissionName[] {
+  return ROLE_PERMISSIONS[role];
+}
 
 /** True if `role` grants `permission`. Unknown role names (should never
  * happen once a real session is loaded) fail closed. */

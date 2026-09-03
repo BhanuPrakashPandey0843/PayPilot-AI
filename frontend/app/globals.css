@@ -18,6 +18,9 @@
   --accent-cyan: #22d3ee;
   --accent-emerald: #34d399;
   --accent-gold: #e8c88a;
+  --accent-violet: #a78bfa;
+  --accent-amber: #fbbf24;
+  --accent-rose: #fb7185;
 
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.16);
@@ -264,5 +267,101 @@ body {
   .animate-confetti {
     animation: none;
     opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Dashboard Home — AI orb, mesh gradient drift, shimmer skeletons.    */
+/* ------------------------------------------------------------------ */
+
+@keyframes orb-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-14px) scale(1.02);
+  }
+}
+
+.animate-orb-float {
+  animation: orb-float 7s ease-in-out infinite;
+}
+
+@keyframes orb-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-orb-spin {
+  animation: orb-spin 18s linear infinite;
+}
+
+@keyframes mesh-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(3%, -4%) scale(1.05);
+  }
+  66% {
+    transform: translate(-3%, 3%) scale(0.98);
+  }
+}
+
+.animate-mesh-drift {
+  animation: mesh-drift 16s ease-in-out infinite;
+}
+
+@keyframes shimmer-sweep {
+  from {
+    background-position: -400px 0;
+  }
+  to {
+    background-position: 400px 0;
+  }
+}
+
+.animate-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer-sweep 1.6s linear infinite;
+}
+
+@keyframes particle-rise {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-120px) translateX(var(--particle-drift, 10px));
+    opacity: 0;
+  }
+}
+
+.animate-particle-rise {
+  animation: particle-rise 6s ease-in infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-orb-float,
+  .animate-orb-spin,
+  .animate-mesh-drift,
+  .animate-shimmer,
+  .animate-particle-rise {
+    animation: none;
   }
 }

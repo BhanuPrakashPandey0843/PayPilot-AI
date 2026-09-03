@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import { AICopilotChat } from "../../_components/dashboard/ai-copilot/AICopilotChat";
 
 export default function AICopilotPage() {
-  return (
-    <PagePlaceholder
-      title="AI Copilot"
-      description="Ask questions and get explainable answers about your business."
-    />
-  );
+  return <AICopilotChat />;
 }

@@ -1,7 +1,5 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import { AuditLogsView } from "../../_components/audit/AuditLogsView";
 
 export default function AuditLogsPage() {
-  return (
-    <PagePlaceholder title="Audit Logs" description="Every important action. Fully traceable." />
-  );
+  return <AuditLogsView />;
 }

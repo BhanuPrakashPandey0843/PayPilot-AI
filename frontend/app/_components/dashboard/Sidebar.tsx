@@ -50,6 +50,7 @@ export function Sidebar({
       />
 
       <aside
+        data-shell-sidebar
         className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-[var(--border-subtle)] bg-[var(--background-elevated)] transition-[width,transform] duration-300 ease-out ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } lg:sticky lg:inset-auto lg:top-0 lg:h-screen lg:translate-x-0 ${
