@@ -1,5 +1,5 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import { TeamView } from "../../_components/team/TeamView";
 
 export default function TeamMembersPage() {
-  return <PagePlaceholder title="Team Members" description="Who has access to this workspace." />;
+  return <TeamView />;
 }

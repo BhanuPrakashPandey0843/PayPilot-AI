@@ -15,6 +15,7 @@ import { customersRoutes } from "./modules/customers/customers.routes.js";
 import { agentCatalogRoutes } from "./modules/agent/agent.routes.js";
 import { commerceAgentRoutes } from "./modules/commerce-agent/commerce.routes.js";
 import { checkoutRoutes } from "./modules/checkout/checkout.routes.js";
+import { ordersRoutes } from "./modules/orders/orders.routes.js";
 import { paymentRoutes } from "./modules/payments/payment.routes.js";
 import { webhookRoutes } from "./modules/payments/webhook.routes.js";
 import { auditRoutes } from "./modules/audit/audit.routes.js";
@@ -99,6 +100,13 @@ async function buildServer() {
             "creation, and payment signature verification. Requires authentication and the ai.execute permission " +
             "(never ai.read — this moves money). The AI agent never calls Razorpay directly; every checkout goes " +
             "through here.",
+        },
+        {
+          name: "Orders",
+          description:
+            "Read-only order records: paginated/searchable/filterable list, real per-status summary counts, and " +
+            "full order detail (items, customer, payment attempt history, captured payment). Requires " +
+            "authentication and the orders.read permission.",
         },
         {
           name: "Payments",
@@ -194,6 +202,7 @@ async function buildServer() {
   await app.register(agentCatalogRoutes, { prefix: "/api/v1/agent/catalog" });
   await app.register(commerceAgentRoutes, { prefix: "/api/v1/commerce" });
   await app.register(checkoutRoutes, { prefix: "/api/v1/checkout" });
+  await app.register(ordersRoutes, { prefix: "/api/v1/orders" });
   await app.register(paymentRoutes, { prefix: "/api/v1/payments" });
   // Registered as its own encapsulated plugin (not nested under another
   // route file) so its route-local raw-body content parser (needed for

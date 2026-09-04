@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import { RevenueOpportunitiesView } from "../../_components/revenue-opportunities/RevenueOpportunitiesView";
 
 export default function RevenueOpportunitiesPage() {
-  return (
-    <PagePlaceholder
-      title="Revenue Opportunities"
-      description="Revenue waiting to be recovered, ranked and explained."
-    />
-  );
+  return <RevenueOpportunitiesView />;
 }

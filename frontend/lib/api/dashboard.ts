@@ -160,6 +160,10 @@ export interface RevenueOpportunity {
   executedAt: string | null;
   executionResult: Record<string, unknown> | null;
   executionFailureReason: string | null;
+  /** Set by the backend for opportunities with a bounded approval window;
+   * action-policy.service.ts's NOT_EXPIRED check fails execution once
+   * this passes. Null when no expiry applies. */
+  expiresAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

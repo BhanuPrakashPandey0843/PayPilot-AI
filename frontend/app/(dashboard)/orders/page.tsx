@@ -1,7 +1,5 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import { OrdersView } from "../../_components/orders/OrdersView";
 
 export default function OrdersPage() {
-  return (
-    <PagePlaceholder title="Orders" description="Track orders from checkout through fulfillment." />
-  );
+  return <OrdersView />;
 }

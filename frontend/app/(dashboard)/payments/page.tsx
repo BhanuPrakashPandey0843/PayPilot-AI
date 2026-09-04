@@ -1,7 +1,5 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import { PaymentsView } from "../../_components/payments/PaymentsView";
 
 export default function PaymentsPage() {
-  return (
-    <PagePlaceholder title="Payments" description="Payment attempts, captures, and refunds." />
-  );
+  return <PaymentsView />;
 }

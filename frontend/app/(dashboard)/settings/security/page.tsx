@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "../../../_components/PagePlaceholder";
+import { SecurityView } from "../../../_components/settings/security/SecurityView";
 
 export default function SecuritySettingsPage() {
-  return (
-    <PagePlaceholder
-      title="Security Settings"
-      description="Session policy and account security."
-    />
-  );
+  return <SecurityView />;
 }

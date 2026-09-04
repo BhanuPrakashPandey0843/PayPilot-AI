@@ -114,6 +114,13 @@ export const apiClient = {
       method: "POST",
       body: payload !== undefined ? JSON.stringify(payload) : undefined,
     }),
+  /** For partial-update endpoints (e.g. PATCH /products/:id) — same
+   * envelope handling as post(), different HTTP verb. */
+  patch: <T>(path: string, payload?: unknown) =>
+    request<T>(path, {
+      method: "PATCH",
+      body: payload !== undefined ? JSON.stringify(payload) : undefined,
+    }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
   /**
    * For paginated list endpoints, where the backend sends `meta`

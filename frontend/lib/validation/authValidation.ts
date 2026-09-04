@@ -35,6 +35,24 @@ export function validateConfirmPassword(password: string, confirm: string): stri
   return null;
 }
 
+/** Used by ChangePasswordDialog — the backend's own change-password
+ * contract (see lib/api/auth.ts's changePassword doc comment) requires
+ * the current password to re-authenticate the request; this is just the
+ * "don't submit blank" client-side check, the real verification always
+ * happens server-side against the stored hash. */
+export function validateCurrentPassword(value: string): string | null {
+  if (!value) return "Enter your current password";
+  return null;
+}
+
+/** New password must differ from the current one — UX-only signal
+ * (the backend contract in lib/api/auth.ts doesn't require this, but
+ * submitting an identical "new" password is almost always a mistake). */
+export function validateNewPasswordDiffers(current: string, next: string): string | null {
+  if (current && next && current === next) return "New password must be different from your current password";
+  return null;
+}
+
 /**
  * Mirrors backend/src/modules/auth/auth.schemas.ts's registerBodySchema
  * password rule (8–128 chars, at least one letter, at least one digit).

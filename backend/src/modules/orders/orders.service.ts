@@ -1,4 +1,5 @@
 import { Errors } from "../../utils/errors.js";
+import { buildPaginationMeta } from "../../utils/response.js";
 import type { Executor } from "../../db/index.js";
 import {
   insertOrderWithItems,
@@ -7,10 +8,20 @@ import {
   casUpdateOrderStatusScoped,
   getOrderItemsForOrder,
   generateOrderNumber,
+  listOrdersScoped,
+  getLatestAttemptsForOrders,
+  getOrdersSummaryScoped,
+  type OrderFilters,
+  type OrderPagination,
+  type OrderSorting,
+  type OrderListRow,
 } from "./orders.repository.js";
 import { isValidOrderTransition } from "./orders.types.js";
 import { emitAudit } from "../../utils/audit.js";
+import { getCustomerForOrg } from "../customers/customers.service.js";
+import { listAttemptsForOrder, getPaymentForOrderScoped } from "../payments/payment.repository.js";
 import type { NewOrder, NewOrderItem, Order } from "../../db/schema/orders.js";
+import type { PaymentAttempt } from "../../db/schema/payments.js";
 
 export async function getOrderForOrg(organizationId: string, id: string): Promise<Order> {
   const order = await getOrderByIdScoped(organizationId, id);
@@ -96,4 +107,57 @@ export async function transitionOrderStatus(
 
 export async function listItemsForOrder(orderId: string, executor?: Executor) {
   return getOrderItemsForOrder(orderId, executor);
+}
+
+// ---------------------------------------------------------------------
+// Admin listing (/orders page).
+// ---------------------------------------------------------------------
+
+export interface OrderListRowWithPayment extends OrderListRow {
+  /** Latest payment_attempt for this order, or null if checkout never
+   * got as far as creating one (shouldn't normally happen — an order is
+   * only ever created alongside its first attempt — but never assumed). */
+  latestPaymentAttempt: PaymentAttempt | null;
+}
+
+export async function listOrdersForOrg(
+  organizationId: string,
+  filters: OrderFilters,
+  pagination: OrderPagination,
+  sorting: OrderSorting = {}
+) {
+  const { rows, total } = await listOrdersScoped(organizationId, filters, pagination, sorting);
+  const attemptsByOrderId = await getLatestAttemptsForOrders(rows.map((r) => r.id));
+
+  const enriched: OrderListRowWithPayment[] = rows.map((row) => ({
+    ...row,
+    latestPaymentAttempt: attemptsByOrderId.get(row.id) ?? null,
+  }));
+
+  return { rows: enriched, meta: buildPaginationMeta(pagination, total) };
+}
+
+export async function getOrdersSummaryForOrg(organizationId: string) {
+  return getOrdersSummaryScoped(organizationId);
+}
+
+/**
+ * Full detail composition for the order detail view: the order itself,
+ * its line items, the customer who placed it, the complete payment
+ * attempt history (retries included), and the captured payment record
+ * if one exists. Every piece is fetched through the existing, already-
+ * organization-scoped functions from orders/customers/payments — no new
+ * business logic, just assembly for the read view.
+ */
+export async function getOrderDetailForOrg(organizationId: string, id: string) {
+  const order = await getOrderForOrg(organizationId, id);
+
+  const [items, customer, attempts, payment] = await Promise.all([
+    getOrderItemsForOrder(id),
+    getCustomerForOrg(organizationId, order.customerId),
+    listAttemptsForOrder(id),
+    getPaymentForOrderScoped(organizationId, id),
+  ]);
+
+  return { order, items, customer, attempts, payment: payment ?? null };
 }

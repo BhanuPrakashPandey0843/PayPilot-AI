@@ -86,7 +86,7 @@ export function requestPasswordReset(email: string): Promise<ForgotPasswordRespo
 }
 
 export interface MeResponse {
-  user: AuthUser;
+  user: AuthUser & { status?: "invited" | "active" | "disabled"; lastLoginAt?: string | null };
   organization: AuthOrganization;
   // IMPORTANT: unlike login/register (role: string), GET /auth/me
   // returns role as the full { id, name } row (see auth.service.ts's
@@ -109,8 +109,53 @@ export interface MeResponse {
  * role-name string, matching AuthSession.role from login/register —
  * see the MeResponse doc comment for why that normalization has to
  * happen here rather than being assumed away.
+ *
+ * `status` and `lastLoginAt` are real columns getMe() already selects
+ * (auth.service.ts) but the original AuthUser type dropped — carried
+ * through here (not on AuthUser/AuthSession, since login/register's
+ * authResponseSchema never returns them) so the Security Settings page
+ * can show a real "last login" without inventing one.
  */
-export async function getMe(): Promise<{ user: AuthUser; organization: AuthOrganization; role: string }> {
+export async function getMe(): Promise<{
+  user: AuthUser;
+  organization: AuthOrganization;
+  role: string;
+  status: "invited" | "active" | "disabled" | undefined;
+  lastLoginAt: string | null;
+}> {
   const raw = await apiClient.get<MeResponse>("/auth/me");
-  return { user: raw.user, organization: raw.organization, role: raw.role?.name ?? "" };
+  return {
+    user: raw.user,
+    organization: raw.organization,
+    role: raw.role?.name ?? "",
+    status: raw.user.status,
+    lastLoginAt: raw.user.lastLoginAt ?? null,
+  };
+}
+
+interface ChangePasswordResponse {
+  message: string;
+}
+
+/**
+ * POST /auth/change-password — NOTE: like requestPasswordReset() above,
+ * this route does not exist in the backend yet (only /auth/register,
+ * /auth/login, /auth/me are registered in
+ * modules/auth/auth.routes.ts as of this writing). Written against the
+ * contract ChangePasswordDialog expects once it ships: body
+ * { currentPassword, newPassword }, response { message }, same
+ * { success, data } envelope as every other auth route. Until then,
+ * calling this fails with a real 404 from apiClient (never swallowed or
+ * faked as success) — see ChangePasswordDialog's error handling for how
+ * that's surfaced to the merchant.
+ *
+ * When implementing the backend route: verify currentPassword against
+ * the stored hash with utils/password.ts's verifyPassword() (same as
+ * loginUser()) before hashing and persisting newPassword, require
+ * authentication, and emit an audit event (e.g. "PASSWORD_CHANGED",
+ * target: { kind: "user", id: userId }) so it shows up in this same
+ * user's audit trail the way USER_LOGIN_SUCCESS already does.
+ */
+export function changePassword(currentPassword: string, newPassword: string): Promise<ChangePasswordResponse> {
+  return apiClient.post<ChangePasswordResponse>("/auth/change-password", { currentPassword, newPassword });
 }

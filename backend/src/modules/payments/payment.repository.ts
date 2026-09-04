@@ -131,6 +131,24 @@ export async function getPaymentByIdScoped(
   return row;
 }
 
+/** The captured payment record for one order, if any (there is at most
+ * one — `payments.payment_attempt_id` is unique, and an order only ever
+ * has one succeeding attempt). Used by the /orders detail view to show
+ * the definitive "money moved" record alongside the attempt history. */
+export async function getPaymentForOrderScoped(
+  organizationId: string,
+  orderId: string,
+  executor: Executor = db
+): Promise<Payment | undefined> {
+  const [row] = await executor
+    .select()
+    .from(payments)
+    .where(and(eq(payments.orderId, orderId), eq(payments.organizationId, organizationId)))
+    .orderBy(desc(payments.createdAt))
+    .limit(1);
+  return row;
+}
+
 export interface PaymentHistoryPagination {
   page: number;
   limit: number;

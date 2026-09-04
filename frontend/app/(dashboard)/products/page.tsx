@@ -1,5 +1,5 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import { ProductsView } from "../../_components/products/ProductsView";
 
 export default function ProductsPage() {
-  return <PagePlaceholder title="Products" description="Manage your AI-readable catalog." />;
+  return <ProductsView />;
 }

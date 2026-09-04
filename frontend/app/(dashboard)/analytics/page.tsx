@@ -1,7 +1,5 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import { AnalyticsView } from "../../_components/analytics/AnalyticsView";
 
 export default function AnalyticsPage() {
-  return (
-    <PagePlaceholder title="Analytics" description="Revenue trends and performance over time." />
-  );
+  return <AnalyticsView />;
 }

@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "../../_components/PagePlaceholder";
+import { CustomersView } from "../../_components/customers/CustomersView";
 
 export default function CustomersPage() {
-  return (
-    <PagePlaceholder
-      title="Customers"
-      description="Everyone who has bought, or almost bought, from you."
-    />
-  );
+  return <CustomersView />;
 }
