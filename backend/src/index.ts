@@ -10,6 +10,7 @@ import { registerAuthenticate } from "./middleware/authenticate.js";
 import { AppError, Errors } from "./utils/errors.js";
 import { fail } from "./utils/response.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
+import { organizationsRoutes } from "./modules/organizations/organizations.routes.js";
 import { productsRoutes } from "./modules/products/products.routes.js";
 import { customersRoutes } from "./modules/customers/customers.routes.js";
 import { agentCatalogRoutes } from "./modules/agent/agent.routes.js";
@@ -68,6 +69,12 @@ async function buildServer() {
       // Tags appear in Swagger UI in this order.
       tags: [
         { name: "Auth", description: "Registration, login, and current user profile." },
+        {
+          name: "Organization",
+          description:
+            "The current user's own organization settings (name, currency, timezone). Scoped to the " +
+            "authenticated user's organization only. Requires organizations.read (GET) or organizations.update (PATCH).",
+        },
         {
           name: "Products / Catalog",
           description:
@@ -197,6 +204,7 @@ async function buildServer() {
 
   // --- Feature routes ---
   await app.register(authRoutes, { prefix: "/api/v1/auth" });
+  await app.register(organizationsRoutes, { prefix: "/api/v1/organizations" });
   await app.register(productsRoutes, { prefix: "/api/v1/products" });
   await app.register(customersRoutes, { prefix: "/api/v1/customers" });
   await app.register(agentCatalogRoutes, { prefix: "/api/v1/agent/catalog" });

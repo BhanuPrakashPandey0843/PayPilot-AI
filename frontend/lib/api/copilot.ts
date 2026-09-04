@@ -23,6 +23,12 @@ export interface CopilotChatResult {
   toolCalls: CopilotToolCall[];
 }
 
+// FIX (verified bug): the copilot module is registered at prefix
+// "/api/v1/merchant/ai" in backend/src/index.ts, with the handler at
+// POST "/chat" in copilot.routes.ts - so the real path is
+// /api/v1/merchant/ai/chat, not /api/v1/copilot/chat. Every copilot
+// message was 404ing against the real, fully-built backend endpoint
+// until this was corrected.
 export function postCopilotChat(message: string): Promise<CopilotChatResult> {
-  return apiClient.post<CopilotChatResult>("/copilot/chat", { message });
+  return apiClient.post<CopilotChatResult>("/merchant/ai/chat", { message });
 }

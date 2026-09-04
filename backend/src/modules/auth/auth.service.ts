@@ -260,7 +260,14 @@ export async function getMe(userId: string, organizationId: string) {
     .limit(1);
 
   const [organization] = await db
-    .select({ id: organizations.id, name: organizations.name, slug: organizations.slug })
+    .select({
+      id: organizations.id,
+      name: organizations.name,
+      slug: organizations.slug,
+      status: organizations.status,
+      currency: organizations.currency,
+      timezone: organizations.timezone,
+    })
     .from(organizations)
     .where(eq(organizations.id, organizationId))
     .limit(1);

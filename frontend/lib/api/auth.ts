@@ -24,6 +24,14 @@ export interface AuthOrganization {
   id: string;
   name: string;
   slug: string;
+  // Real columns on organizations.ts (status/currency/timezone) that
+  // getMe() now selects (backend/src/modules/auth/auth.service.ts) but
+  // login/register's leaner authResponseSchema does not return -
+  // optional here so AuthSession's organization (from login/register)
+  // still satisfies this type without them.
+  status?: "active" | "suspended" | "inactive";
+  currency?: string;
+  timezone?: string;
 }
 
 export interface AuthSession {

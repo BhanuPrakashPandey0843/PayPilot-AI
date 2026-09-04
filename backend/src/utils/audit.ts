@@ -49,6 +49,7 @@ export type AuditEventType =
   | "PERMISSION_CHECK_GRANTED"
   | "PERMISSION_CHECK_DENIED"
   | "ORGANIZATION_CREATED"
+  | "ORGANIZATION_UPDATED"
   | "AUTHENTICATION_FAILED"
   | "AUTHORIZATION_DENIED"
   // --- Milestone 5: checkout / payment / webhook lifecycle ---

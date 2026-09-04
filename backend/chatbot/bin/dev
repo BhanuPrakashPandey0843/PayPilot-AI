@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+
+if gem list --no-installed --exact --silent foreman; then
+  echo "Installing foreman..."
+  gem install foreman
+fi
+
+# This app runs alongside the GoCart storefront (which uses port 3000 for
+# `next dev`) and is embedded into it via iframe at localhost:3001 (see
+# user/components/ChatWidget.jsx), so default here to 3001, not 3000.
+# NOTE: this default is set in the shell before foreman/Rails ever start,
+# so it takes precedence over PORT in .env (dotenv-rails only fills in
+# ENV vars that aren't already set) — keep this and .env's PORT in sync.
+export PORT="${PORT:-3001}"
+
+exec foreman start -f Procfile.dev --env /dev/null "$@"

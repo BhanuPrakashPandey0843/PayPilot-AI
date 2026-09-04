@@ -9,6 +9,50 @@
             transform: translateX(-50%);
         }
     }
+
+    @keyframes botFloat {
+        0%, 100% {
+            transform: translateY(0px) rotate(0deg);
+        }
+        50% {
+            transform: translateY(-10px) rotate(-3deg);
+        }
+    }
+
+    @keyframes botPulseRing {
+        0% {
+            transform: scale(0.9);
+            opacity: 0.6;
+        }
+        70% {
+            transform: scale(1.6);
+            opacity: 0;
+        }
+        100% {
+            transform: scale(1.6);
+            opacity: 0;
+        }
+    }
+
+    @keyframes botBlink {
+        0%, 90%, 100% {
+            transform: scaleY(1);
+        }
+        95% {
+            transform: scaleY(0.1);
+        }
+    }
+
+    @keyframes chatPanelIn {
+        0% {
+            opacity: 0;
+            transform: translateY(16px) scale(0.96);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
 }
 
 @layer base {

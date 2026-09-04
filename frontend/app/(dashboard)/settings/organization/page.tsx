@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "../../../_components/PagePlaceholder";
+import { OrganizationSettingsView } from "../../../_components/settings/organization/OrganizationSettingsView";
 
 export default function OrganizationSettingsPage() {
-  return (
-    <PagePlaceholder
-      title="Organization Settings"
-      description="Workspace name, currency, and timezone."
-    />
-  );
+  return <OrganizationSettingsView />;
 }
